@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>114設計職群題庫</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background-color: #FFF0F5; /* Lavender Blush */
+            color: #4A4A4A;
+        }
+
+        /* Macaron Color Palette */
+        .bg-macaron-pink { background-color: #FFB7B2; }
+        .bg-macaron-blue { background-color: #AEC6CF; }
+        .bg-macaron-green { background-color: #BFFFF0; } /* More vibrant green */
+        .bg-macaron-yellow { background-color: #FDFD96; }
+        .bg-macaron-purple { background-color: #C3B1E1; }
+        
+        .text-macaron-dark { color: #5D5D5D; }
+
+        /* Component Styles */
+        .card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border: 4px solid white;
+        }
+
+        .btn-macaron {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-bottom: 4px solid rgba(0,0,0,0.1);
+        }
+        .btn-macaron:active {
+            transform: translateY(2px);
+            border-bottom: 0px solid rgba(0,0,0,0.1);
+        }
+        .btn-macaron:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .option-card {
+            border: 3px solid #F0F0F0;
+            transition: all 0.2s;
+        }
+        .option-card:hover {
+            border-color: #AEC6CF;
+            background-color: #F7FBFF;
+        }
+        .option-card.selected {
+            border-color: #FFB7B2;
+            background-color: #FFF5F5;
+            box-shadow: 0 0 0 2px #FFB7B2;
+        }
+
+        .text-huge { font-size: 1.5rem; line-height: 2.2rem; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: #FFF0F5; }
+        ::-webkit-scrollbar-thumb { background: #FFB7B2; border-radius: 6px; border: 3px solid #FFF0F5; }
+
+        /* Print adjustments */
+        @media print {
+            .no-print { display: none !important; }
+            .print-break { page-break-inside: avoid; }
+            body { background: white; }
+            #app { box-shadow: none; border: none; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- App Container -->
+    <div id="app" class="w-full max-w-5xl h-[90vh] flex flex-col relative card overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-macaron-purple p-6 text-center relative z-10 shadow-sm">
+            <h1 class="text-3xl md:text-5xl font-black text-white tracking-widest drop-shadow-md">
+                <i class="fas fa-swatchbook mr-3"></i>114設計職群題庫
+            </h1>
+            <div class="absolute top-1/2 right-6 transform -translate-y-1/2 hidden md:block">
+                <span class="bg-white/30 px-4 py-2 rounded-full text-white font-bold backdrop-blur-sm">
+                    <i class="fas fa-database mr-2"></i>共 250 題
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Content (Scrollable) -->
+        <main class="flex-grow relative overflow-hidden bg-white">
+            <div id="scroll-container" class="absolute inset-0 overflow-y-auto p-6 md:p-10">
+                <!-- Content injected by JS -->
+            </div>
+        </main>
+
+        <!-- Footer (Navigation) -->
+        <footer id="quiz-footer" class="bg-gray-50 p-4 border-t-2 border-gray-100 hidden z-10">
+            <div class="max-w-4xl mx-auto flex justify-between items-center gap-4">
+                <button onclick="navPrev()" id="btn-prev" class="btn-macaron bg-gray-200 text-gray-600 px-6 py-3 rounded-2xl font-bold text-xl w-32">
+                    <i class="fas fa-chevron-left mr-2"></i>上題
+                </button>
+                
+                <div class="flex flex-col items-center">
+                    <div class="text-xs text-gray-400 font-bold tracking-widest uppercase">Question</div>
+                    <div id="tracker" class="text-3xl font-black text-macaron-dark">1 / 30</div>
+                </div>
+
+                <button onclick="navNext()" id="btn-next" class="btn-macaron bg-macaron-blue text-white px-6 py-3 rounded-2xl font-bold text-xl w-32">
+                    下題<i class="fas fa-chevron-right ml-2"></i>
+                </button>
+                
+                <button onclick="submitQuiz()" id="btn-submit" class="hidden btn-macaron bg-macaron-pink text-white px-6 py-3 rounded-2xl font-bold text-xl w-32">
+                    繳交<i class="fas fa-check ml-2"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- 1. Raw Data (250 Questions) ---
+        // Using a template literal to store the raw text provided
+        const rawTextData = `
+（4） 1. 壓克力顏料具有豐富多樣的特質，為了表現肌理，不常使用的手法有（1）噴濺（2）刮擦（3）壓印（4）渲染。 
+（1） 2. 壓克力顏料不適合在何者表面上使用？（1）奈米級玻璃（2）紙板（3）木板（4）塑膠。 
+（4） 3. 壓克力筆的製造材質，下列何者為非？（1）動物毛比較稀有（2）動物毛比較耐用（3）動物毛比較容易積汙變硬（4）化學合成毛不適合 。 
+（1） 4. 下列何種肌理種類的水彩紙，對畫面表現質感的增強效果較不佳？（1）熱壓紙（2）冷壓紙（3）免壓紙（4）粗面紙。 
+（1） 5. 炭筆繪畫的基本處理步驟不包含（1）位置（2）輪廓（3）線條（4）調子。 
+（2） 6. 麥克筆分為酒精性與油性兩種，下列敘述何者錯誤？（1）酒精性逐漸取代油性（2）酒精性在渲染方面比較容易（3）繪圖混合粉彩使用時油性麥克筆的效果較佳（4）油性揮發氣體對人體有害。 
+（2） 7. 關於繪畫材料的敘述，下列何者為錯誤？（1）水墨所使用的色料，可分為植物性與礦物性（2）鉛筆依筆心的軟硬程度，可分為水性鉛筆與油性鉛筆（3）麥克筆依顏料性質的差異，可分為水性、油性與酒精性（4）粉彩筆依顏料性質區分，可分為粉質與油質。 
+（2） 8. DM設計輸出將檔案轉成PDF檔案時，內置圖片色彩條件設定何者正確？（1）RGB（2）CMYK（3）LAB（4）索引色。 
+（4） 9. 下列何者為正確的輸出印刷色彩模式？（1）索引色模式（2）黑白模式（3）RGB色彩模式（4）CMYK色彩模式。 
+（2） 10. 下列何者不是CMYK的列印檔案格式？（1）pdf（2）png（3）tiff（4）eps。 
+（1） 11. 下列關於影像檔案格式的敘述何者正確？（1）JPG檔的影像品質會降低（2）GIF檔的色彩可支援全彩模式（3）CMYK模式的影像可以存成BMP檔（4）EPS檔案的體積小且支援透明背景。 
+（1） 12. 下列何者非GIF檔案的特點？（1）具高效率的壓縮比（2）可製成動畫（3）屬於非破壞性壓縮（4）可設背景色為透明。 
+（2） 13. 關於JPG圖檔格式的敘述何者錯誤？（1）瀏覽器可直接開啟（2）是向量式的圖片格式（3）支援全彩顯示（4）採破壞性壓縮方式。 
+（4） 14. 在影像處理軟體中，下列何者不會影響檔案大小與品質？（1）影像尺寸（2）解析度（3）圖層多寡（4）圖層順序。 
+（4） 15. 下列關於影像處理軟體中遮色片的敘述何者正確？（1）遮色片只有黑跟白（2）在圖層中利用遮色片將特定區域塗黑可遮住下方影像（3）遮色片無法做出漸層效果（4）遮色片可以保留原始的影像不受破壞。 
+（3） 16. 影像解析度是以像素為單位，通常解析度愈高品質愈好，下列何者是正確的輸出解析度？（1）350像素/公分（2）350像素/公厘（3）300像素/英吋（4）300像素/公分。 
+（2） 17. 下列何者不屬於編輯軟體Adobe InDesign的功能？（1）簡報製作（2）影片音樂剪接（3）印刷排版編輯（4）互動式影音電子書製作。 
+（2） 18. 繪畫和素描的關係，下列何者正確？（1）繪畫就是素描，兩者相同（2）素描為繪畫的表現方式之一（3）繪畫是素描的基礎（4）繪畫是畫輪廓，素描是完整作品。 
+（4） 19. 鉛筆的軟硬標示中，何種符號代表較硬筆芯？（1）C（2）F（3）B （4）H。 
+（4） 20. 繪畫顏料可分為透明、不透明兩大類，以下何者較適合當作透明顏料使用？（1）廣告顏料（2）油彩（3）粉彩（4）水彩。 
+（3） 21. 眾多繪畫材料中，以下哪一種不需要使用水為稀釋溶劑？（1）水彩（2）廣告顏料（3）粉彩（4）水墨。 
+（1） 22. 下列素描鉛筆的標示中，由硬到軟，何者排列正確？（1）2H、H、F、HB（2）2H、F、H、HB（3）HB、H、F、2H（4）H、F、HB、2H。 
+（2） 23. 關於素描紙的敘述，以下何者錯誤？（1）8開畫紙是4開畫紙的一半（2）鉛筆素描的畫紙選擇上越光滑越佳（3）素描紙重視耐磨度（4）一般4開畫紙的尺寸約為39*543m。 
+（3） 24. 畫素描時，要處理畫面上明度較高的部分，下列哪一種方式較不適宜？（1）使用硬橡皮擦出白色線條（2）以2H鉛筆上色（3）以6B鉛筆上色（4）使用軟橡皮擦出白色塊面。 
+（1） 25. 以下何種素描工具使用於構圖時的畫面安排？（1）取景框（2）噴膠（3）紙筆（4）橡皮擦。 
+（4） 26. 素描工具中，「紙筆」的功能主要為？（1）構圖工具（2）畫出線條（3）擦拭鉛筆線（4）按壓炭粉。 
+（3） 27. 以下何者非鉛筆素描的基本要素？（1）線條（2）筆觸（3）彩度（4）明度。 
+（1） 28. 線是以何者為其重要特性？（1）長度（2）形狀（3）寬度（4）厚度。 
+（4） 29. 運用圓規、直尺各工具所繪出的圖形是何者的特色？（1）有機抽象形 （2）人為形（3）有機形（4）幾何抽象形。 
+（3） 30. 下列何者為設計概念上的基本元素？（1）方向、位置、空間、重心 （2）形狀、大小、色彩、肌理（3）點、線、面、體（4）律動、統一、平衡、對比。 
+（3） 31. POP 廣告具有多樣性，在賣場的效果（1）專為製造熱鬧氣氛（2）不太容易引起消費者注意（3）會誘導衝動購買（4）無關消費者產生購買意願。 
+（1） 32. （1）商標（2）插圖（3）造型（4）標準色 是廠商或商品的標誌。 
+（4） 33. 文字造形的設計領域包括（1）字體設計（2）文字應用設計（3）文字編排設計（4）以上皆是。 
+（4） 34. 以彩色瓷磚片做馬賽克拼貼圖案，將不同色彩的小磚片並列，使在遠觀時產生混色效果，是屬於哪一項混色原理的運用？（1）加法混色 （2）減法混色（3）旋轉混色（4）並置混色。 
+（4） 35. 下列何者不屬於字體設計的原則？（1）定出正確的字型架構（2）應符合主題或目的（3）容易閱讀（4）字體力求花俏、變化多端。 
+（3） 36. 印刷用紙的計算單位為令，一令等於（1）300（2）400（3）500（4）600 張全開紙。 
+（3） 37. 下列何者不是點陣繪圖軟體？（1）Adobe Photoshop（2）Ulead PhotoImpact（3）Adobe Illustrator（4）Corel Painter。 
+（4） 38. 表現出變化、舒暢、優雅、柔軟之線條為（1）斜直線（2）包洛線（3）鋸狀線（4）曲線。 
+（3） 39. 下列何色非彩色印刷四原色所能呈現？（1）深褐色（2）淺藍色（3）銀色（4）淡紫色。 
+（4） 40. 下列何者為向量繪圖適用的作業？（1）版面設計（2）文字設計（3）LOGO設計（4）以上皆是。 
+（2） 41. 以圖像或文字呈現之色盲檢驗圖形，主要是運用何種視覺特性？（1）點的大小（2）點的顏色（3）點的方向（4）點的質感。 
+（3） 42. 色料中純色加灰就變成？（1）清色（2）明色（3）濁色（4）淺色。 
+（2） 43. 自由曲線通常具有（1）硬直（2）活潑（3）單調（4）刻板 的感覺。 
+（1） 44. 在電腦相關軟體中，文字沿著圖形的編排稱為（1）文繞圖（2）分散對齊（3）強制對齊（4）對齊中軸。 
+（3） 45. 下列何者非「完形法則」？（1）閉鎖性法則（2）連續性法則（3）開放性法則（4）接近性法則。 
+（1） 46. 版面中圖片所佔據的面積比率稱為（1）圖版率（2）躍動率（3）離心率（4）圓周率。 
+（4） 47. 下列何者不屬於平面設計的範圍？（1）商業設計（2）包裝設計（3）印刷設計（4）服裝設計。 
+（1） 48. 什麼是人工智慧（AI）？（1）模仿人類思考和行為的電腦程式 （2）像人類一樣執行任務的機器人（3）一種能夠自我複製的電腦病毒（4）只能執行簡單計算的電腦。 
+（3） 49. 什麼是AI生成的圖像？（1）人工手繪圖像（2）用傳統版畫印製的圖像（3）通過AI自動生成的圖像（4）用相機拍攝的作品。 
+（2） 50. AI繪圖工具主要用來做什麼？（1）遊戲程式設計（2）自動生成圖像 （3）編輯文檔（4）播放音樂。 
+（1） 51. 如果AI生成的圖片不理想，該如何重新生成？（1）修正提示詞重新生成（2）用圖片編輯軟體進行修正（3）手動繪製新的圖片（4）圖片無法重新生成。 
+（4） 52. AI繪圖工具如何模仿藝術風格？（1）以手繪技法臨摹（2）通過手動編碼完成（3）無法模仿藝術風格（4）分析和學習現有作品。 
+（1） 53. AI如何幫助設計師做出更好的設計？（1）自動生成內容提供設計參考（2）完全取代設計師的工作（3）進行市場整合（4）向客戶報價。 
+（2） 54. AI生成的設計與人類設計有什麼不同？（1）AI設計很僵化 （2）AI設計是自動化的（3）用AI設計速度更慢（4）人類的設計會更快完成。 
+（3） 55. AI在設計領域的應用，下列何者錯誤？（1）自動生成設計圖稿（2）協助設計師進行創意發想（3）可以完全取代人類的工作（4）分析使用者行為，提供客製化設計。 
+（3） 56. AI圖像生成過程中會出現什麼問題？（1）圖像無法保存（2）只能生成文字無法生成圖像（3）可能生成不準確或失真的圖像（4）只能生成黑白圖像。 
+（2） 57. 如何使用AI工具生成一張圖片？（1）使用滑鼠手繪（2）描述圖像提示詞讓AI生成（3）使用文書工具輸入（4）使用3D建模。 
+（1） 58. 如何用AI設計自動生成一個標誌（Logo）？（1）使用提示詞生成 （2）完全以人工繪製（3）直接下載免費圖像（4）使用相機拍攝。 
+（3） 59. 如何使用AI工具製作插畫？（1）使用相機拍照（2）用鉛筆手繪 （3）提供提示詞讓AI生成（4）用向量工具繪製。 
+（1） 60. AI如何用來設計廣告圖片？（1）用AI生成基本框架再進行調整 （2）設計師完全手動繪製（3）只能生成文字內容（4）無法應用於廣告設計。 
+（4） 61. 在設計領域AI的發展，對設計師來說代表著什麼？（1）失業的危機 （2）新的發展機會（3）工作內容的轉變（4）以上皆是。  
+（2） 62. 下列哪項不是AI在設計領域面臨的挑戰？（1）數據隱私問題 （2）缺乏創意（3）技術門檻高（4）倫理道德問題。 
+（2） 63. 下列哪種設計工作最可能利用AI來協助設計師？（1）金工木工雕塑 （2）圖文設計協作（3）操作3D列印設備（4）傳統媒材繪畫。 
+（4） 64. 人工智慧如何協助平面設計的創作過程？（1）編寫程式碼（2）協助繪製草圖（3）自動執行重複性任務（4）以上皆是。 
+（1） 65. 人工智慧如何幫助產生新的設計理念？（1）提供豐富的創意靈感（2）限制創造力（3）複製過去的設計（4）減少創新。 
+（1） 66. 人工智慧對於設計作品的影響，何者錯誤？（1）無法協助設計 （2）增加多樣性（3）增強創造力（4）降低設計成本。 
+（4） 67. 下列何者不是AI圖像生成工具？（1）Copilot（2）StableDiffusion （3）Gemini（4）E-mail。 
+（2） 68. 在設計領域未來AI的發展方向，最有可能是：（1）可以完全取代人類 （2）成為設計師的最佳助手（3）未來發展將停滞不前（4）只能應用於設計領域。 
+（4） 69. AI生成的設計作品，其版權歸屬通常屬於誰？（1）使用AI工具的設計師（2）開發AI工具的公司（3）訓練AI模型的數據提供者（4）以上皆非，版權歸屬複雜。 
+（4） 70. 人工智慧如何影響設計產業的就業市場？（1）沒有影響（2）減少創造力（3）完全取代人類（4）創造新的工作機會。 
+（1） 71. 人工智慧生成人物肖像的倫理考量是什麼？（1）侵權與隱私問題 （2）提高創造力（3）更快的生產（4）降低成本。 
+（1） 72. 人工智慧如何輔助商標和品牌設計？（1）快速產生概念（2）編寫工業程式碼（3）增強使用者互動（4）設計網站。 
+（1） 73. 人工智慧在書籍封面設計中扮演什麼角色？（1）自動化設計元素 （2）撰寫故事（3）印刷書籍（4）減少封面多樣性。 
+（4） 74. 人工智慧在藝術設計教育中的角色，最有可能是？（1）取代傳統的設計教師（2）藝術設計課程被取消（3）減少了學生的創造力（4）提供學生更多創作靈感。 
+（1） 75. 人工智慧應用於動畫製作領域的潛在缺點是什麼？（1）減少原創與藝術性（2）加快生產速度（3）提高品質（4）降低成本。 
+（2） 76. 如何用AI設計網站首頁？（1）編寫HTML代碼（2）用AI生成 （3）使用手繪工具（4）上傳拍攝的圖片。 
+（4） 77. AI如何幫助優化使用者界面（UI）設計？（1）自動生成使用者測試報告（2）提供網頁安全功能（3）優化網頁速度（4）自動生成介面佈局和元素。 
+（2） 78. AI工具如何選擇最佳顏色和佈局？（1）通過隨機選擇（2）根據設計規則和數據分析（3）被動依賴使用者輸入（4）自動套用預設樣式。 
+（4） 79. 如何用AI製作抽象藝術？（1）無法生成抽象藝術（2）用相機拍攝景物（3）使用手繪工具（4）以提示詞讓AI生成。  
+（2） 80. 人工智慧如何影響當代藝術設計的發展趨勢？（1）與未來趨勢無關 （2）開創新的可能性（3）消除所有傳統形式（4）專注於過去。 
+（4） 81. AI生成的圖片後續可以如何進行優化完稿？（1）手工修改每個像素 （2）AI生成圖片不可修改（3）改變檔案格式（4）用設計軟體進行編輯。 
+（2） 82. 下列哪項技術是AI在設計領域中最常使用的？（1）虛擬貨幣（2）機器學習（3）區塊鏈（4）量子計算。 
+（3） 83. 下列哪一種AI技術最適合應用於圖像生成設計？（1）自然語言處理 （2）機器學習（3）生成對抗網路(GAN)（4）強化學習。 
+（1） 84. 電腦視覺（ComputerVision）在AI領域的應用包括：（1）臉部影像辨識（2）語音辨識（3）資料庫管理（4）程式設計。 
+（1） 85. 人工智慧如何為互動設計領域做出貢獻？（1）增強使用者介面 （2）減少互動性（3）限制選擇性（4）重複過去的設計模式。 
+（2） 86. 生成對抗網路（GAN）是什麼？（1）一種檔案壓縮技術（2）一種AI生成圖像的技術（3）一種文書處理工具（4）一種社交媒體平台。 
+（1） 87. AI生成圖像技術中的神經風格遷移（NeuralStyleTransfer）是什麼？（1）模仿圖像風格（2）圖像壓縮技術（3）自動編輯影片（4）文本轉換技術。 
+（2） 88. 造形演變的過程，說明了從實用目的之造形，最後成為（1）歷史性 （2）文化性（3）民族性（4）精神性。 
+（3） 89. 英文中Design是指（1）美術（2）創造（3）設計（4）商標。 
+（4） 90. 優良的設計作品有時強調「什麼」，比顧慮設計的種種條件要來得多且重要?（1）環保意識（2）合理的價格（3）材料的節省（4）藝術的感動性。 
+（4） 91. 設計工作除了達到作品美觀的效果外，亦需求（1）技術佳（2）材料好（3）便宜（4）實用。 
+（1） 92. 廣義的解釋，人類為了一種理由或為了一種目的，為了達到目的而定下的計畫，可說是（1）設計（2）藝術（3）娛樂（4）破壞。 
+（1） 93. 最高級的設計行為乃是創造出（1）有用的物品（2）華麗、高尚的物品（3）簡單的物品（4）銷售量多的物品。 
+（4） 94. 「商業設計」的最大目的是（1）大量生產（2）提高品質（3）造形計畫（4）增加銷售。 
+（4） 95. 下列有關「視覺傳達設計」何者為誤？（1）只要是需經過視覺接受的表現方式，皆可視為視覺傳達設計（2）其經常處理的有企業識別、符號設計等（3）其涵蓋範圍比商業設計廣泛（4）其最終使用目標必須含有商業行為。 
+（3） 96. 「視覺傳達設計」乃是製造良好的訊息，以作為人與「什麼」間的精神媒介?（1）人（2）自然（3）所屬社會間（4）自我。 
+（4） 97. 下列何者不屬於商業設計的核心領域?（1）包裝設計（2）廣告設計（3）展示設計（4）室內設計。 
+（3） 98. 點陣式繪圖是用什麼來組成圖形（1）面（2）線（3）點（4）圓。 
+（4） 99. PC上屢獲大獎的2D向量繪圖軟體，是（1）Dremwaver （2） Photoshop（3）FrontPage（4）CorelDRAW 。 
+（3） 100. 向量式圖形放大或旋轉是否有失真的問題？（1）不一定（2）有 （3）沒有（4）以上皆非。 
+（4） 101. 圖檔的每一個圖點稱為（1）公厘（2）英吋（3）公分（4）像素。 
+（2） 102. Photoshop 是（1）向量式軟體（2）點陣軟體（3）偽裝軟體（4）壓縮軟體。 
+（4） 103. 以下何種繪圖是利用基本造型來組合出圖形？（1）P2P（2）壓縮（3）點陣（4）向量。 
+（3） 104. 向量圖形存檔時的大小與圖案的（1）長寬（2）密度（3）複雜度（4）像素 有關。 
+（1） 105. 筆型工具是用來繪製（1）路徑（2）文字（3）漸層（4）線條 的工具。 
+（3） 106. 筆型工具中，用來改變一個已存在的錨點需使用（1）創意筆工具（2）刪除錨點工具（3）轉換錨點工具（4）刪除錨點工具。 
+（3） 107. 各種質感的製作可利用（1）編輯功能（2）影像功能（3）濾鏡功能（4）圖層功能。 
+（3） 108. 包裝紙、地磚、紡織品等是何種構成之運用？（1）漸變（2）律動 （3）連續（4）放射。 
+（4） 109. 下列何種色彩配色屬於補色對比？（1）紅色與黃色（2）藍色與白色 （3）橙色與黃色（4）綠色與洋紅色。 
+（3） 110. 西元十七世紀法國凡爾賽宮的建築外觀，室內裝飾成家具設計的風格是典型（1）新藝術風格（2）羅馬風格（3）巴洛克風格（4）洛可可風格 的表現。 
+（3） 111. 有關電腦印前作業軟體及特性，下列敘述何者錯誤？（1）Photoshop是點陣式繪圖軟體，Illustrator 是向量式繪圖軟體（2）向量式比點陣式繪圖軟體更適合縮放圖形，而不致影響輸出品質（3）向量式與點陣式繪圖軟體均適合於文件內輸入內文（4）一般相同面積的向量式圖檔比點陣式圖檔之儲存空間小。 
+（2） 112. 在色相環中通常位於直徑兩端的色彩是（1）類似色（2）互補色（3）對比色（4）曖昧色。 
+（1） 113. 下列何種色彩屬於特別色？（1）金色（2）青色（3）綠色（4）橙色。 
+（2） 114. 眼睛所看到的香蕉，其「黃色」是？（1）光源色（2）表面色（3）透過色（4）標準色。 
+（1） 115. 伊登（Itten）色環是以何組原色為基礎，來發展色環？（1）紅、黃、藍（2）紅、綠、藍（3）黃、綠、紫（4）紅、橙、黃。 
+（1） 116. 以一文句表現廣告的主題，稱為？（1）標語（2）標誌（3）標題 （4）商品名。 
+（3） 117. 在白色的背景上，下列何種純色的注目性最高？（1）黃色（2）綠色 （3）紫色（4）橙色。 
+（4） 118. 德國設計聯盟簡稱為（1）MBD（2）DIA（3）AEG（4）DWB。 
+（4） 119. 法國巴黎地鐵大都會站，其入口所採用的設計藝術風格是（1）裝飾藝術（2）美術工藝運動（3）普普藝術（4）新藝術。 
+（1） 120. 在美國創立的新包浩斯成立於（1）芝加哥（2）紐約（3）舊金山 （4）華盛頓。 
+（3） 121. 「形隨機能而生」是（1）密斯凡德洛（2）魯斯（3）蘇利文（4）萊特 所提出的銘言。 
+（1） 122. 下列有關平面上點構成之空間感敘述，何者較不正確？（1）以等量相似的點做等距相鄰，由左下朝右上重覆排列（2）利用點的重疊與點的放大縮小，可產生空間感（3）點的曲面化，可產生空間感（4）點描派畫家秀拉利用不同明暗的彩色點與各點間的疏密產生空間感。 
+（2） 123. 色立體的中心軸為（1）彩度階段（2）明度階段（3）色相階段 （4）濃度階段。 
+（2） 124. 色溫度是指色光的（1）溫度（2）色相（3）明暗（4）頻率。 
+（2） 125. POP Art是指（1）歐普藝術（2）普普藝術（3）裝置藝術（4）DADA藝術。 
+（1） 126. 對於近代設計思潮與其代表人物之配對，何者不正確？（1）新藝術運動／羅威（2）德國工藝聯盟／慕特修斯（3）美國建築芝加哥派／萊特（4）風格派／蒙德里安。 
+（1） 127. 新藝術運動在法國的形態特色為（1）彎曲（2）直線（3）彎曲加直線 （4）幾何形。 
+（3） 128. 下列設計運動或流派：A.包浩斯；B.裝飾藝術；C.新藝術；D.美術工藝運動；E.德國工藝聯盟，請依興起年代之先後，排列出正確順序 （1）DBCEA（2）DABEC（3）DCEAB（4）DCBAE。 
+（2） 129. 有現代海報之父之稱的設計師是（1）羅特列克（2）朱勒薛雷（3）維克多吉馬德（4）慕夏。 
+（4） 130. 十九世紀石版印刷術大型化，新藝術畫家及設計師紛紛開始創作表現新的媒體─海報，其中以（1）米羅（2）達利（3）布雷克（4）羅特列克 最著名。 
+（3） 131. 中國傳統古代建築及西方教堂，常富有安穩、莊嚴肅穆之感受，主要是因為具備下列何者美的形式原理應用？（1）漸層（2）律動（3）對稱（4）比例。 
+（2） 132. 廟裡的藻井具有何種視覺效果（1）對比（2）放射（3）交叉（4）特異。 
+（3） 133. 下列何者對色光三原色之敘述錯誤（1）不能再分解（2）不能由其它色光混合出來（3）為紅、黃、藍光（4）紅和綠光相混合時可得到黃色光。 
+（4） 134. 「萬綠叢中一點紅」及「鶴立雞群」為（1）比例（2）調合（3）平衡 （4）對比 的表現。 
+（4） 135. 1917年所建的台中火車站建築風格是典型的（1）裝飾藝術（2）新藝術（3）巴洛克（4）維多利亞 風格。 
+（2） 136. 在設計方法中，K.J.法指的是（1）腦力激盪法（2）分類法（3）水平思考法（4）屬性列舉法。 
+（1） 137. 在創意發想及造形設計的技術表現上，為擴大思考空間，增強後續思考能量，首先要進行下列何種思考？（1）水平思考（2）垂直思考（3）六頂思考帽法（4）5W2H七何分析法。 
+（4） 138. 各種視覺效果的基本構成中，「二方連續」和「四方連續」的構成法則是將造型以何種排列表現（1）重疊（2）移位（3）錯視（4）反覆。 
+（3） 139. 「黃金分割比例」是指矩形的長寬比為（1）1：2.141（2）1：3.318 （3）1：1.618（4）1：1.666。 
+（1） 140. 當形狀呈現漸漸變大或漸漸變小，或是色澤逐漸變濃或淡化，這是 （1）漸變的美（2）反覆的美（3）對稱的美（4）統一的美。 
+（4） 141. 貝殼、中國的寶塔、蜘蛛網等，三者共同的一個造形特徵是（1）對比 （2）對稱（3）均衡（4）漸層。 
+（2） 142. 視覺上有「整齊、嚴謹、規矩、保守」的感覺，請問這是哪一種美的形式原理？（1）對比（2）統一（3）漸層（4）漸變。 
+（4） 143. 在大自然的景像中常可發現碎形的現象，但下列何者為非？（1）海岸線（2）雪花（3）雲朵（4）麥田。 
+（1） 144. 單位形是構成中最基本的造形元素，下列有關單位形的敘述，何者不正確？（1）單位形以上下和左右延伸排列的稱為二方連續（2）單位形時常表現在地磚、壁紙和包裝紙的設計（3）佛教萬字符號，可視為四個旋轉九十度的單位形（4）國旗中的白色光芒，可視為放射狀的單位形表現。 
+（4） 145. 單位形的構成欲呈現動勢效果，下列何種方法不適切？（1）一群單位形以集中擴散方式改變單位形的距離（2）一群單位形由左下往右上呈線性排列（3）單位形等距水平垂直排列後，局部改變單位形的位置、方向（4）一群單位形以等間距做水平或垂直排列。 
+（4） 146. 台北市立美術館旁的台北故事館建築風格是典型的（1）裝飾藝術 （2）新藝術（3）巴洛克（4）英國都鐸式 風格。 
+（1） 147. 有關生物擬態之色彩，下列敘述何者正確？（1）蝴蝶為吸引異性，而發展出鮮豔色彩，此為對比視覺原理（2）毛毛蟲演化而成的特別色彩是為了繁殖的使命，故為繁殖色（3）梅花鹿的色彩符合了對比視覺原理，而達到了隱藏色的作用（4）瓢蟲身上的色彩是為了警告與嚇阻敵人，此為群化視覺原理。 
+（3） 148. 台北自來水博物館建築呈現（1）浪漫主義（2）新藝術（3）新古典主義（4）矯飾主義 風格。 
+（2） 149. 中國傳統水墨畫講求「墨分五色」是指（1）色相（2）明度（3）彩度 （4）顏料的充分活用與表現。 
+（2） 150. 美的形式原理中有關對稱的敘述，下列何者不正確？（1）太極圖形是對稱的形式（2）著名的魯賓杯是旋轉對稱的形式（3）二方連續的造形是對稱的形式（4）放射狀圖形可以同時具有點對稱與線對稱的特性。 
+（1） 151. dpi表示（1）每吋的點數（2）每公分的點數（3）每吋的線數（4）每公分的像數。 
+（2） 152. 製作電腦網頁，應設定何種解析度為宜？（1）150 dpi（2）72 dpi （3）400 dpi（4）250 dpi。 
+（3） 153. 應用多種不同的物件材質，種類如紙類、布類、塑膠類、金屬類、玻璃類等，製作成所需的圖形，又稱複合媒材法，是為（1）渲染法（2）噴刷法（3）拼貼法（4）拓印法。 
+（3） 154. 何者非對比現象的利用？（1）舞台燈光突然由暗轉亮（2）斑馬線 （3）四季的變化（4）高反差攝影。 
+（4） 155. 軍隊的迷彩服以及動物、昆蟲身上的保護色，都具有偽裝與擬態的效果，此種視覺現象與下列何者相近？（1）對稱（2）平衡（3）對比（4）群化。 
+（4） 156. 東方古代木匠從墨斗拉出墨繩，以此標示直線；也因此常有意外的墨線、墨點噴落效果產生，此特殊技法方式屬於（1）拓印法（2）噴刷法 （3）墨紋法（4）彈線法。 
+（3） 157. 「平衡」為美的形式原理之一，以下圖為例，它應屬何種平衡？ （1）對稱平衡（2）不平衡（3）不對稱平衡（4）對稱不平衡。 
+（1） 158. 向來有工業設計界的奧斯卡獎之名的是？（1）iF設計獎（2）G-mark設計獎（3）Red Dot設計獎（4）IDEA設計獎。 
+（2） 159. 任何物體的表面構成特徵稱之為（1）效果（2）肌理（3）微粒 （4）造型。 
+（3） 160. 人類可視光譜的波長範圍大約是（1）330~680mm（2）340~750mm （3）400~700mm（4）430~790mm。 
+（3） 161. 在紙張之上滴上顏料，趁顏料未乾之前，使用筆刷工具做引導，讓顏料流向預定位置，形成預期圖案的技法屬於（1）自然滴流法（2）渲染法（3）控制滴流法（4）潑墨法。 
+（3） 162. 下列何者不是尖銳形狀在視知覺上所具有的特性（1）攻擊的意義 （2）速度的感覺（3）富有的樣子（4）前進的象徵。 
+（4） 163. 何者不是綠色設計考量的範圍？（1）產品耐用化（2）產品回收化 （3）產品材料可分解（4）產品材料多樣化。 
+（3） 164. 以色料的原色混合，次數越多，其亮度（1）不變（2）越高（3）越低 （4）不一定。 
+（3） 165. 適當運用「線」的組合，可以產生三次元空間感。下列方法，何者較不可能產生空間感？（1）水平方向的多條直線，粗細漸變（2）斜方向的多條曲折線，疏密漸變（3）水平方向的多條直線，等距組合（4）斜方向的多條曲折線，等距組合。 
+（3） 166. 下列何種印刷技法，較能應用於各種材質和形狀的被印製物？（1）凸版（2）凹版（3）網版（4）平版。 
+（3） 167. 廣告插圖設計的目的在下列敘述中何者不正確（1）達到吸引讀者注意廣告的功能（2）幫助讀者理解廣告的功能（3）主要為填補版面的功能（4）將讀者視線引導至文案的功能。 
+（4） 168. 下列何者非立體感的表現形式？（1）利用平行線方向改變（2）利用同心圓位置改變（3）利用間隔疏密變化（4）同色覆疊。 
+（3） 169. 素描的主要構成元素是（1）立體（2）點（3）線（4）面。 
+（1） 170. 發起「美術工藝運動」者為（1）威廉莫里斯（2）康丁斯基（3）那基 （4）林布蘭。 
+（4） 171. 十九世紀初有「世界工廠」之稱的國家是（1）美國（2）法國（3）印度（4）英國。 
+（3） 172. 採用白色物體做為素描訓練的主要目的，下列敘述何者正確？（1）白色物體的輪廓較其他顏色物體的輪廓明顯（2）白色物體的造形簡單容易表現出透視的效果（3）白色物體的單一色調易於用來研究明暗變化 （4）白色物體的質地純淨易養成良好的工作習慣。 
+（3） 173. 在構圖中，下列何者容易呈現穩重、崇高、偉大、積極的特性？ （1）十字形構圖（2）垂直線構圖（3）三角形構圖（4）圓形構圖。 
+（2） 174. 下列有關鉛筆技法的敘述，何者較不正確？（1）鉛筆畫可用衛生紙、布、手磨擦畫面，做出均勻柔和的色調（2）軟質橡皮擦在鉛筆畫中的作用，是用來擦拭錯誤，不可調整色調（3）鉛筆畫的線條，可以採用自由奔放的亂線，造成活潑情趣（4）扁芯鉛筆可透過運筆角度的變化，畫出寬細不同的線條。 
+（3） 175. 根據描繪的經驗，有關風景畫的構圖方式，下列何者較不正確？ （1）地平線若在畫面較低處，可看到高遠的天空視野（2）地平線若在畫面正中央，較容易流於呆板（3）對稱式構圖與非對稱式構圖相較，前者較容易有生動活潑的效果（4）河流或道路，常以S形出現，以引導視線。 
+（2） 176. 下列有關單色鉛筆素描的敘述，何者不正確？（1）是一種初學者常用的繪畫方式（2）是一種研究補色較好的繪畫方式（3）是一種較不受時間空間限制的繪畫方式（4）是一種可以解決基本繪畫問題的繪畫方式。 
+（4） 177. 下列有關描繪的選紙，何者較不正確？（1）用鉛筆摩擦拓印，採用的紙張不宜太厚，拓印肌理才明顯（2）炭筆畫的用紙，通常選用紙紋清晰而表面較粗糙的紙，炭粉才易附著（3）鋼筆畫的用紙，通常選用表面較光滑的紙，墨水線條才流利（4）粉彩畫的用紙，不宜採用有色調的紙張，色彩效果才鮮明。 
+（4） 178. 炭筆素描技法多樣，下列何者較不適用於炭筆調子的處理？（1）壓抹技法：處理炭色明暗調子（2）沾擦技法：修飾或者提亮調子（3）添加技法：分層描繪輕重調子（4）渲染技法：大面暈染不同調子。 
+（3） 179. 描繪物像時，為了突顯主題強度，下列處理方式何者不正確？（1）加強主題部份描繪（2）加強主題部份明暗對比（3）加強非主題部份明暗對比（4）簡化非主題部份描繪。 
+（4） 180. 下列紙張尺寸的大小排序何者正確？（1）四六版全開＞菊全開＞B0＞A0（2）菊全開＞四六版全開＞A0＞B0（3）A0＞B0＞菊全開＞四六版全開（4）B0＞A0＞四六版全開＞菊全開。 
+（1） 181. 下列有關鉛筆畫的質感處理要點，何種敘述不正確？（1）描繪金屬物品時，明暗對比宜小，各色調的區塊間界線不要太明顯，用筆必須有力清楚（2）描繪表面柔軟的物體時，色調層次要多，可適當使用擦抹的方法，求取柔和變化（3）描繪一般物體時，硬質、中間硬度、軟質三類鉛筆可以反覆靈活使用（4）描繪表面粗糙的物體時，可適當保留鉛筆筆觸所畫出的粗糙效果，避免擦抹過度。  
+（2） 182. 下列有關繪畫空間感之敘述何者正確？（1）在視覺經驗中，物體的底部通常低於眼睛高度，愈遠之物體則底部愈低（2）輪廓邊緣完整者感覺在前，不完整者感覺在後（3）形狀清晰者感覺往後退，模糊者則有前進之感（4）在透視法則中，等大之人或物，在畫面上形狀大者感覺較後，形狀小者感覺較前。 
+（3） 183. 以炭筆描繪戶外風景時，手執量棒測量對象物，正確的姿勢是？ （1）用量棒放置在風景對象物上，找出量棒上正確比例標示點（2）如果對象物在三公尺以內，可因測量的需要打直或彎曲手臂，以便找出正確的標示點（3）在同一定點上，手臂打直用大拇指在量棒上下移動，找出對象物正確比例標示點（4）在量測景深距離時，因為畫面對象物空間位置不一，宜因景深距離來調整手臂測量位置。 
+（4） 184. 下列哪一位設計師擅長繪畫、工藝、馬賽克、設計等，一生致力於臺 灣工藝美術的推動，盡心培育工藝設計人才，有「臺灣美術工藝之 父」之尊稱？（1）陳俊良（2）姚開陽（3）蕭青陽（4）顏水龍。 
+（3） 185. 有關素描與繪畫發展的簡史，下列對畫家風格的敘述何者不正確？ （1）文藝復興時期畫家：米開朗基羅所畫人物具有悲壯之美；達文西所畫人物則具有睿智的特質（2）巴洛克時期畫家：林布蘭的作品強調光影明暗的強烈對比；魯本斯則強調絢麗色彩與宏偉構圖（3）浪漫主義畫家：德拉克洛瓦重視素描甚於色彩；新古典主義畫家：安格爾則重視色彩甚於素描（4）新印象主義畫家：秀拉的素描作品利用紙張的肌理，表現出自然光線中閃爍、顫動的效果；後印象主義畫家：梵谷的素描作品則表現出素描的線性特質。 
+（3） 186. 畫素描時，壓抹是一種重要的輔助技法，下列敘述何者錯誤？（1）壓抹的工具有棉布、衛生紙、海綿等（2）利用壓抹的技法，可以做出比較柔和均勻的調子（3）壓抹時，適度使用報紙沾浸去漬油為佳（4）利用紙筆可以處理小面積的細節調子。 
+（2） 187. 杜象的作品：泉、腳踏車輪等，是屬於下列何種造形表現？（1）絕對主義（2）達達主義（3）構成主義（4）新造形主義。 
+（3） 188. 下列哪一個時期主張採用標準化、模矩化等方式量產商品？（1）美術工藝運動（2）風格派（3）包浩斯（4）新藝術。 
+（2） 189. 下列有關質感表現的敘述，何者較不正確？（1）描繪粗糙表面質感，應適度保留鉛筆筆觸，避免擦抹太多（2）描繪金屬器皿質感，要專注在體材本身，而非周圍環境物體反映其上的光影效果（3）描繪玻璃、透明壓克力等透明質感，要注意透視背後重疊景物的曲折變形（4）描繪衣服、布料等柔軟質感，應以漸層色調描繪出輕柔的感覺，避免銳利的筆觸。 
+（3） 190. 水墨互不相容是何種印刷法的原理（1）凸版（2）凹版（3）平版 （4）網版 印刷。 
+（1） 191. 下列何者不屬於平面廣告媒體？（1）電台（2）海報（3）報紙 （4）雜誌。 
+（3） 192. 祝卡洛於《雕刻家、畫家和建築家的理念》書中，所指的「內在設計」是（1）技法（2）構圖（3）理念（4）媒材。 
+（3） 193. 雜誌廣告具下列何者特性（1）較容易引起商品購買慾望（2）閱讀者經濟水平較其他媒體閱讀者高（3）較易獨佔版面防止其他廣告干擾 （4）廣告壽命較短。 
+（3） 194. 取材自日常生活與周遭環境的繪畫，畫裡出現的是農民、市民、貴族等各階層的人，畫面內容是事實的呈現，而不再是理想化的人生，是屬於哪一種繪畫風格？（1）抽象畫（2）山水畫（3）風俗畫（4）印象畫。 
+（1） 195. 採用現代生活的主題，將生活中平凡的東西、平常的事情變成藝術表現主題，藉由創作對這些平凡事物的價值重新估計、重新定義，是屬於哪一種藝術風格？（1）普普藝術（2）歐普藝術（3）立體主義（4）表現主義。 
+（2） 196. 以形、色所產生的律動，進而產生錯覺或幻覺等新的繪畫表現，是屬於哪一種藝術風格？（1）普普藝術（2）歐普藝術（3）立體主義（4）表現主義。 
+（3） 197. POP廣告具有多樣性，在賣場的效果（1）專為製造熱鬧氣氛（2）不太容易引起消費者注意（3）會誘導衝動購買（4）無關消費者產生購買意願。。 
+（1） 198. 素描是繪畫的基礎，藉由哪三種基本技法，可在二度空間的紙張上，表現三度空間的深度？（1）線條、筆觸、明度（2）形狀、色彩、質感（3）構圖、煤材、色彩（4）材質、空間、線條。 
+（4） 199. 鉛筆素描中線條的表現如：輕重、粗細、長短等，能呈現三度空間深度關係，通常表現遠方物體的是（1）短促的（2）粗黑的（3）綿長的 （4）輕淡的。 
+（2） 200. 下列哪一位畫家不屬於印象派？（1）梵谷（2）林布蘭（3）高更 （4）塞尚。 
+（1） 201. 素描繪製過程中，水平與垂直輔助線的使用與下列何者無關？（1）質感（2）比例（3）位置（4）輪廓。 
+（4） 202. 素描有助於我們培養觀察力，繪製對象物時為能表現寫實的空間，正確的比例關係十分重要，量測物體時應注意之事項，下列何者不正確？（1）可單閉一隻眼來觀察（2）和靜物保持一些距離（3）避免身體前後晃動（4）手臂保持彎曲。 
+（1） 203. 下列何者非圖地反轉圖形之創作者？（1）畢卡索（2）達利（3）瓦沙雷利（4）艾薛爾。 
+（2） 204. 下列何種造形屬於自然造形？（1）塑膠花（2）貝殼（3）房子 （4）汽車。 
+（2） 205. 由齊柏林導演所拍攝的紀錄片《看見台灣》，我們在電影中所見到的景象是屬於（1）平視（2）俯視（3）仰視（4）多視點 的角度。 
+（1） 206. 影響立體主義的形成，有「現代繪畫之父」之稱的是哪一位藝術家？ （1）塞尚（2）畢卡索（3）布拉克（4）雷傑。 
+（4） 207. 圓、橢圓和拋物線等是屬於？（1）幾何直線（2）自由曲線（3）徒手曲線（4）幾何曲線。 
+（4） 208. 畫家走出畫室以描繪戶外風景，強調光影與色彩的是下列哪一個藝術流派？（1）自然主義（2）立體主義（3）古典主義（4）印象主義。 
+（3） 209. 在繪畫裡，藝術家運用光和影的關係，給予人不同的心理感受，善於描繪燭光營造神秘氣氛的是（1）維梅爾（2）秀拉（3）拉突爾 （4）林布蘭。 
+（1） 210. 輪廓線條宜用（1）柔和、簡潔明快線條為佳（2）重疊厚重的線條 （3）裝飾華麗的線條（4）不清晰的虛線。 
+（4） 211. 下列有關素描與繪畫的材料，何者敘述不正確？（1）一般軟質鉛筆的分類記號為B，號數愈大筆筆芯愈軟（2）使用硬質橡皮擦應避免用力過猛，以免紙張損傷（3）水溶性彩色鉛筆可以形成如水彩般渲染的效果（4）作品完成後可以使用完稿用噴膠保護畫面，使鉛筆粉或炭粉不易脫落，延長保存時間。 
+（3） 212. 企業識別系統設計之基本設計要素，包括企業標誌、企業名稱、標準字、企業色彩及（1）企業名片（2）運輸工具（3）企業標語（4）制服。 
+（2） 213. 電線桿下方的黑黃相間斜線是利用了下列何種原理（1）視覺上的錯覺 （2）視覺上的注目性（3）生理上的安定感（4）心理上的喜好感。 
+（3） 214. 文藝復興時期的「藝術三傑」，不包含下列何者？（1）達文西（2）拉斐爾（3）安格爾（4）米開朗基羅。 
+（4） 215. 畫家米勒所繪的「拾穗」與「晚禱」是屬於哪一個畫派？（1）前拉斐爾畫派（2）寫實畫派（3）點彩畫派（4）巴比松畫派。 
+（4） 216. 宣導公共場所嚴禁吸菸的海報是屬於（1）藝文海報（2）商業海報 （3）企業海報（4）公益海報。 
+（3） 217. 下列對於點陣圖和向量圖的敘述何者為非？（1）能細微的表現色彩階調，適合用於色彩複雜的圖為點陣圖（2）以數學運算方式來記錄圖形，放大後不失真的為向量圖（3）適合用於輪廓清晰、要求精確線條者為點陣圖（4）向量圖常見副檔名為.ai、.cdr等。 
+（1） 218. 當視覺產生具方向性的移動時，下列何者錯誤？（1）由下往上是瀏覽習慣所影響的方向性（2）移動的方向會隨著大→小（3）銳角角度比鈍角更具方向性（4）形狀漸變方向，會由單純形到複雜形。 
+（4） 219. 色彩的飽和程度或純度稱為（1）明度（2）色相（3）色環（4）彩度。 
+（3） 220. 菊全開尺寸為（1）31”×43”（2）26”×37”（3）25”×35” （4）25”×38”。 
+（2） 221. 按色彩的三屬性作有系統的排列形成三度空間的結構稱為（1）色環 （2）色立體（3）色相（4）三原色。 
+（4） 222. 直排書通常是（1）上開書（2）下開書（3）左開書（4）右開書。 
+（2） 223. 中世紀後至十九世紀初，依西方造形文化演進之時序，可以概分為四個較具代表性時期，依時序排列為？（1）文藝復興→巴洛克→浪漫主義→洛可可（2）文藝復興→巴洛克→洛可可→浪漫主義（3）巴洛克→文藝復興→洛可可→浪漫主義（4）文藝復興→洛可可→巴洛克→浪漫主義。 
+（3） 224. 十九世紀造形設計主流中，何種派別強調手工技術水準，將日常生活用品提升至藝術領域為設計目的？（1）包浩斯（2）德意志工藝聯盟 （3）美術工藝運動（4）新藝術。 
+（1） 225. 四六版全開之尺寸為（1）31”×43”（2）26”×37”（3）25”×35” （4）25”×38”。 
+（4） 226. 下列哪一套繪圖軟體，其圖像無論放大到多大，影像品質仍維持不變？（1）Painter（2）Photoshop（3）3D Max（4）CorelDRAW。 
+（1） 227. 下列何種色彩稱為無彩色？（1）黑色（2）灰藍色（3）乳白色 （4）棕色。 
+（4） 228. 下列何者不是點陣繪圖適用的作業？（1）相片上色處理（2）像素藝術（3）手繪式的寫實繪圖（4）名片設計。 
+（3） 229. 橫排書通常是（1）上開書（2）下開書（3）左開書（4）右開書。 
+（1） 230. 文字最主要的機能為（1）傳達訊息（2）藝術表現（3）美化訊息 （4）沒有作用。 
+（1） 231. 在賓主的關係中，類似又不盡相同，其主題物與襯底間地位有互換的效果，我們通常稱之為（1）圖地反轉（2）圖地相稱（3）圖地平衡 （4）圖地相合。 
+（2） 232. 台灣各大都市都有其建築造形意象，請問下列的都市印象何者不正確？（1）台中→路思義教堂（2）新竹→慈航普渡觀音像（3）高雄→東帝士85大樓（4）台東→三仙台。 
+（3） 233. 可以依據光波的波長之大小來區別色彩的（1）明度（2）彩度（3）色相（4）形式。 
+（3） 234. 英文中的Chroma是指（1）色相（2）明度（3）彩度（4）色相環。 
+（3） 235. 色相的環狀配列叫（1）色調（2）色立體（3）色相環（4）光譜。 
+（1） 236. 超市冷凍肉品陳列架上，何種光源照射較能在視覺上提高肉品的新鮮度？（1）紅色光（2）綠色光（3）黃色光（4）白色光。 
+（2） 237. 下列有關新造形主義的敘述，下列何者為非？（1）又稱為風格派 （2）代表人物有李奇登斯坦、蒙德里安（3）使用紅、黃、藍、白、黑等原色（4）造形風格嚴謹，利用直線與直角，但不講求對稱性的構圖。 
+（4） 238. 平面設計構成的基本造形三要素是（1）長、寬、高（2）聲、色、形 （3）字、圖、框（4）點、線、面。 
+（4） 239. 醫護人員在一般病房穿白色工作服，但在手術房則穿淺綠色工作服，其作用是（1）不易髒（2）環保色（3）美觀（4）補色心理。 
+（3） 240. 若要使文章在編排上能分辨出條理分明的行間必須（1）行距等於字間（2）行距小於字間（3）行距大於字間（4）與行距、字間的比例無關 
+（3） 241. 將視覺對象從其背景浮現出來，稱為圖與地的關係，下列有關圖與地的敘述，何者不正確？（1）在大小面積的比較中，小面積者較易成為圖（2）若相鄰二形均具有對稱形時，凸形者較易成為圖（3）在對稱圖形與非對稱圖形的比較中，非對稱圖形較易成為圖（4）若靜態與動態兩者比較，動態者較易成為圖。 
+（4） 242. 下列敘述何者錯誤？（1）相同長短的線，垂直線與水平線中點交接成T 形時，垂直線會比水平線略長（2）一樣的圓，因為上下擺放位置不同，所以有上圓大於下圓的錯視產生（3）三個一樣的矩形，中間矩形受到兩側矩形的擠壓，有較窄的感覺（4）由於角度的干擾，使接近銳角的圓略顯小。 
+（3） 243. 在一純色中加入白色會使得（1）明度降低、彩度降低（2）明度降低、彩度提高（3）明度提高、彩度降低（4）明度提高、彩度提高。 
+（3） 244. 創意思考的發展，利用毫無關連意念找出共通處，並加以類比、組合而產生新概念的構想技術為（1）水平思考（2）垂直思考（3）聯想法 （4）實驗法。 
+（2） 245. 以色光的原色混合，次數越多，其亮度（1）不變（2）越高（3）越低 （4）不一定。 
+（2） 246. 木版、金屬版、壓克力版、橡膠版的印刷方式屬於（1）單次印刷法 （2）可重複印刷法（3）孔版印刷法（4）平版印刷法。 
+（3） 247. 有一張600×300像素大小的圖片，若將圖形解析度設定為300dpi，則其列印尺寸應為（1）4×2（2）1×1/2（3）2×1（4）8×4 英吋。 
+（2） 248. 影響色彩輕重感覺最主要的屬性是（1）色相（2）明度（3）彩度 （4）濃度。 
+（1） 249. 下列何種因素與滴流法產生的效果無關？（1）光線（2）紙張（3）水分（4）筆刷。 
+（2） 250. 下列何者色彩搭配的明視度最高（1）綠底黃字（2）黑底黃字（3）紅底橙字（4）黃底白字。
+`;
+
+        // --- 2. Parser Logic ---
+        function parseRawData(text) {
+            // Clean up text: replace line breaks that are not followed by a new question number
+            // Strategy: Split by regex that finds start of questions like (4) 1. or (1) 120.
+            
+            // 1. Split into blocks based on question pattern
+            // Regex matches: (Answer) Number.
+            const blocks = text.split(/(?=\n[\(（]\d[\)）]\s*\d+\.)/g);
+            
+            const parsed = [];
+
+            blocks.forEach(block => {
+                block = block.trim();
+                if (!block) return;
+
+                // Extract Answer Index (0-3)
+                const ansMatch = block.match(/^[\(（](\d)[\)）]/);
+                let ansIdx = 0;
+                if (ansMatch) {
+                    ansIdx = parseInt(ansMatch[1]) - 1;
+                }
+
+                // Extract Question Number
+                const numMatch = block.match(/^\s*[\(（]\d[\)）]\s*(\d+)\./);
+                let qNum = 0;
+                if (numMatch) {
+                    qNum = parseInt(numMatch[1]);
+                }
+
+                // Remove the header part to process Question Text and Options
+                let content = block.replace(/^[\(（]\d[\)）]\s*\d+\.\s*/, '');
+
+                // Split Options using (1), (2), etc markers
+                // Using regex to split by options but capturing the delimiter
+                const parts = content.split(/[\(（]([1-4])[\)）]/);
+                
+                if (parts.length >= 1) {
+                    const qText = parts[0].trim();
+                    const options = [];
+
+                    // Loop through parts to find options 1, 2, 3, 4
+                    for(let i=1; i<=4; i++) {
+                        const idx = parts.indexOf(String(i));
+                        if(idx !== -1 && idx + 1 < parts.length) {
+                            options.push(parts[idx+1].trim());
+                        }
+                    }
+
+                    if (options.length === 4) {
+                        parsed.push({
+                            id: qNum,
+                            question: qText,
+                            options: options,
+                            answerIndex: ansIdx
+                        });
+                    }
+                }
+            });
+            return parsed;
+        }
+
+        const questionBank = parseRawData(rawTextData);
+
+        // --- 3. App State ---
+        let appState = {
+            currentScreen: 'START',
+            userName: '',
+            quizQuestions: [], // Array of { originalQ, shuffledOptions, userAns }
+            currentQIdx: 0,
+            timer: 0,
+            timerInterval: null
+        };
+
+        // --- 4. Logic Functions ---
+
+        function init() {
+            renderStartScreen();
+        }
+
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function startQuiz(mode, param) {
+            const name = document.getElementById('input-name').value.trim();
+            if (!name) {
+                alert("請輸入姓名！");
+                return;
+            }
+            appState.userName = name;
+
+            let selectedQs = [];
+
+            if (mode === 'random') {
+                const count = parseInt(document.getElementById('input-count').value);
+                if(count < 1 || count > questionBank.length) {
+                    alert("題數錯誤");
+                    return;
+                }
+                selectedQs = shuffle([...questionBank]).slice(0, count);
+            } else if (mode === 'range') {
+                const [start, end] = param.split('-').map(Number);
+                // Filter questions with id in range
+                selectedQs = questionBank.filter(q => q.id >= start && q.id <= end);
+                // Shuffle their order? User asked for "random appearance". 
+                // Usually range tests might keep order, but requirement says "每次題目...都要任意排列".
+                selectedQs = shuffle(selectedQs);
+            }
+
+            if (selectedQs.length === 0) {
+                alert("該範圍無題目！");
+                return;
+            }
+
+            // Prepare Quiz Data (Shuffle Options)
+            appState.quizQuestions = selectedQs.map(q => {
+                let opts = q.options.map((txt, idx) => ({ text: txt, originalIdx: idx }));
+                opts = shuffle(opts);
+                return {
+                    originalQ: q,
+                    options: opts,
+                    userAns: null // index in shuffled options
+                };
+            });
+
+            appState.currentQIdx = 0;
+            appState.timer = 0;
+            appState.currentScreen = 'QUIZ';
+
+            // Start Timer
+            if (appState.timerInterval) clearInterval(appState.timerInterval);
+            appState.timerInterval = setInterval(() => {
+                appState.timer++;
+                // Update timer UI if visible? We render it in renderQuiz
+                const tEl = document.getElementById('timer-display');
+                if(tEl) tEl.innerText = formatTime(appState.timer);
+            }, 1000);
+
+            renderQuiz();
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function selectOption(idx) {
+            appState.quizQuestions[appState.currentQIdx].userAns = idx;
+            renderQuiz();
+        }
+
+        function navPrev() {
+            if (appState.currentQIdx > 0) {
+                appState.currentQIdx--;
+                renderQuiz();
+            }
+        }
+
+        function navNext() {
+            if (appState.currentQIdx < appState.quizQuestions.length - 1) {
+                appState.currentQIdx++;
+                renderQuiz();
+            }
+        }
+
+        function submitQuiz() {
+            const unanswered = appState.quizQuestions.filter(q => q.userAns === null).length;
+            if (unanswered > 0) {
+                if(!confirm(`還有 ${unanswered} 題未作答，確定交卷？`)) return;
+            }
+            clearInterval(appState.timerInterval);
+            renderResult();
+        }
+
+        // --- 5. Render Functions ---
+
+        function renderStartScreen() {
+            const container = document.getElementById('scroll-container');
+            document.getElementById('quiz-footer').classList.add('hidden');
+            
+            // Generate Range Options (every 30)
+            let rangeButtons = '';
+            const total = 250;
+            const step = 30;
+            for(let i=1; i<=total; i+=step) {
+                let end = Math.min(i + step - 1, total);
+                rangeButtons += `
+                    <button onclick="startQuiz('range', '${i}-${end}')" class="bg-macaron-blue text-white py-3 rounded-xl font-bold hover:opacity-90 shadow-sm">
+                        第 ${i} ~ ${end} 題
+                    </button>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto text-center space-y-8 animate-fade-in py-10">
+                    <div class="bg-white p-8 rounded-[30px] border-4 border-dashed border-macaron-purple/30">
+                        <i class="fas fa-user-astronaut text-6xl text-macaron-purple mb-6"></i>
+                        <h2 class="text-2xl font-bold text-gray-600 mb-6">考生登入</h2>
+                        <input type="text" id="input-name" class="w-full text-center text-2xl p-4 border-2 border-gray-200 rounded-2xl focus:border-macaron-purple outline-none bg-gray-50" placeholder="請輸入姓名">
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Random Mode -->
+                        <div class="bg-white p-6 rounded-[30px] shadow-sm border border-gray-100">
+                            <div class="bg-macaron-pink w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl mx-auto -mt-12 mb-4 shadow-md">
+                                <i class="fas fa-dice"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-600 mb-4">隨機抽題</h3>
+                            <div class="flex items-center justify-center gap-2 mb-4">
+                                <input type="number" id="input-count" value="20" min="1" max="250" class="w-24 text-center text-xl p-2 border-2 border-gray-200 rounded-xl">
+                                <span class="text-gray-500 font-bold">題</span>
+                            </div>
+                            <button onclick="startQuiz('random')" class="w-full bg-macaron-pink text-white py-3 rounded-xl font-bold hover:opacity-90 shadow-sm">
+                                開始測驗
+                            </button>
+                        </div>
+
+                        <!-- Range Mode -->
+                        <div class="bg-white p-6 rounded-[30px] shadow-sm border border-gray-100">
+                            <div class="bg-macaron-green w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl mx-auto -mt-12 mb-4 shadow-md">
+                                <i class="fas fa-list-ol"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-600 mb-4">範圍練習</h3>
+                            <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 custom-scroll">
+                                ${rangeButtons}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuiz() {
+            const container = document.getElementById('scroll-container');
+            const footer = document.getElementById('quiz-footer');
+            footer.classList.remove('hidden');
+
+            const curr = appState.quizQuestions[appState.currentQIdx];
+            const q = curr.originalQ;
+
+            // Update Header status
+            document.getElementById('tracker').innerText = `${appState.currentQIdx + 1} / ${appState.quizQuestions.length}`;
+            document.getElementById('btn-prev').disabled = (appState.currentQIdx === 0);
+            
+            const isLast = appState.currentQIdx === appState.quizQuestions.length - 1;
+            document.getElementById('btn-next').classList.toggle('hidden', isLast);
+            document.getElementById('btn-submit').classList.toggle('hidden', !isLast);
+
+            // Render Options
+            const optsHtml = curr.options.map((opt, idx) => {
+                const isSel = curr.userAns === idx;
+                return `
+                    <div onclick="selectOption(${idx})" class="option-card cursor-pointer p-4 md:p-6 rounded-2xl mb-3 flex items-center gap-4 ${isSel ? 'selected' : 'bg-gray-50'}">
+                        <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg md:text-xl font-bold shrink-0 ${isSel ? 'bg-macaron-pink text-white' : 'bg-white text-gray-400 border border-gray-200'}">
+                            ${idx + 1}
+                        </div>
+                        <div class="text-lg md:text-xl text-gray-700 font-medium">${opt.text}</div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto h-full flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="bg-macaron-yellow text-gray-700 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
+                            <i class="fas fa-clock"></i> <span id="timer-display">${formatTime(appState.timer)}</span>
+                        </div>
+                        <div class="text-gray-400 font-bold">QID: ${q.id}</div>
+                    </div>
+
+                    <div class="bg-white p-2 md:p-4 rounded-3xl flex-grow overflow-y-auto">
+                        <h3 class="text-huge font-bold text-gray-700 mb-8 leading-relaxed">
+                            <span class="text-macaron-blue mr-2">●</span>${q.question}
+                        </h3>
+                        <div class="space-y-2">
+                            ${optsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderResult() {
+            const container = document.getElementById('scroll-container');
+            document.getElementById('quiz-footer').classList.add('hidden');
+
+            let correctCount = 0;
+            const details = appState.quizQuestions.map((qData, idx) => {
+                const correctIdx = qData.originalQ.answerIndex;
+                let userText = "未作答";
+                let isCorrect = false;
+
+                if (qData.userAns !== null) {
+                    const chosen = qData.options[qData.userAns];
+                    userText = chosen.text;
+                    if (chosen.originalIdx === correctIdx) {
+                        isCorrect = true;
+                        correctCount++;
+                    }
+                }
+                const correctText = qData.originalQ.options[correctIdx];
+
+                return `
+                    <div class="bg-white p-6 rounded-2xl border-l-[8px] ${isCorrect ? 'border-macaron-green bg-green-50/50' : 'border-macaron-pink bg-red-50/50'} mb-6 print-break shadow-sm">
+                        <div class="flex justify-between mb-2">
+                            <span class="font-bold text-gray-500">第 ${idx + 1} 題</span>
+                            ${isCorrect ? '<i class="fas fa-check-circle text-green-500 text-2xl"></i>' : '<i class="fas fa-times-circle text-red-500 text-2xl"></i>'}
+                        </div>
+                        <div class="text-xl font-bold text-gray-800 mb-4">${qData.originalQ.question}</div>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="p-3 rounded-xl ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                <span class="text-xs opacity-60 block mb-1">您的答案</span>
+                                <span class="font-bold">${userText}</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-blue-50 text-blue-800">
+                                <span class="text-xs opacity-60 block mb-1">正確答案</span>
+                                <span class="font-bold">${correctText}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const score = Math.round((correctCount / appState.quizQuestions.length) * 100);
+
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto pb-20">
+                    <div class="bg-white rounded-[40px] shadow-xl p-8 mb-8 text-center border-t-[12px] border-macaron-purple relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-macaron-pink via-macaron-yellow to-macaron-blue opacity-50"></div>
+                        
+                        <h2 class="text-2xl font-bold text-gray-500 mb-2">${appState.userName} 的測驗結果</h2>
+                        <div class="text-[5rem] font-black text-macaron-purple leading-none mb-4 drop-shadow-sm">${score}</div>
+                        
+                        <div class="flex justify-center gap-8 text-lg font-bold text-gray-400">
+                            <div class="bg-gray-50 px-4 py-2 rounded-xl"><i class="fas fa-check text-green-400 mr-2"></i>答對 ${correctCount} 題</div>
+                            <div class="bg-gray-50 px-4 py-2 rounded-xl"><i class="fas fa-stopwatch text-yellow-400 mr-2"></i>耗時 ${formatTime(appState.timer)}</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-center gap-4 mb-10 no-print">
+                        <button onclick="downloadPDF()" class="btn-macaron bg-macaron-blue text-white px-8 py-4 rounded-xl font-bold shadow-md">
+                            <i class="fas fa-file-pdf mr-2"></i>下載成績單
+                        </button>
+                        <button onclick="downloadCSV()" class="btn-macaron bg-macaron-green text-gray-700 px-8 py-4 rounded-xl font-bold shadow-md">
+                            <i class="fas fa-file-csv mr-2"></i>匯出 Excel
+                        </button>
+                        <button onclick="location.reload()" class="btn-macaron bg-macaron-yellow text-gray-700 px-8 py-4 rounded-xl font-bold shadow-md">
+                            <i class="fas fa-redo mr-2"></i>重新測驗
+                        </button>
+                    </div>
+
+                    <div id="result-details">
+                        <h3 class="text-2xl font-bold text-gray-700 mb-6 border-b-2 border-gray-100 pb-2">
+                            <i class="fas fa-list-ul mr-2 text-macaron-pink"></i>試題詳解
+                        </h3>
+                        ${details}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- 6. Export Functions ---
+
+        function downloadCSV() {
+            let csv = "\uFEFF題號,題目,你的答案,正確答案,結果\n";
+            appState.quizQuestions.forEach((item, idx) => {
+                const q = item.originalQ;
+                const correctIdx = q.answerIndex;
+                const correctTxt = q.options[correctIdx];
+                let userTxt = "未作答";
+                let res = "錯誤";
+                
+                if (item.userAns !== null) {
+                    const chosen = item.options[item.userAns];
+                    userTxt = chosen.text;
+                    if (chosen.originalIdx === correctIdx) res = "正確";
+                }
+
+                // Escape quotes for CSV
+                const safe = (str) => '"' + str.replace(/"/g, '""') + '"';
+                csv += `${idx+1},${safe(q.question)},${safe(userTxt)},${safe(correctTxt)},${res}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${appState.userName}_成績報表.csv`;
+            a.click();
+        }
+
+        function downloadPDF() {
+            const el = document.getElementById('scroll-container');
+            const btns = document.querySelectorAll('.no-print');
+            btns.forEach(b => b.style.display = 'none');
+            
+            const opt = {
+                margin: 10,
+                filename: `${appState.userName}_成績單.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(el).save().then(() => {
+                btns.forEach(b => b.style.display = '');
+            });
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
