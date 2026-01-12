@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>114機械職群題庫</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background-color: #F0F8FF; /* Alice Blue - slightly more mechanical feel but soft */
+            color: #4A4A4A;
+        }
+
+        /* Macaron Color Palette - Mechanical Edition */
+        .bg-macaron-pink { background-color: #FFB7B2; }
+        .bg-macaron-blue { background-color: #AEC6CF; } /* Pastel Blue */
+        .bg-macaron-green { background-color: #77DD77; } /* Pastel Green */
+        .bg-macaron-yellow { background-color: #FDFD96; }
+        .bg-macaron-purple { background-color: #C3B1E1; }
+        
+        .text-macaron-dark { color: #5D5D5D; }
+
+        /* Component Styles */
+        .card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border: 4px solid white;
+        }
+
+        .btn-macaron {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-bottom: 4px solid rgba(0,0,0,0.1);
+        }
+        .btn-macaron:active {
+            transform: translateY(2px);
+            border-bottom: 0px solid rgba(0,0,0,0.1);
+        }
+        .btn-macaron:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .option-card {
+            border: 3px solid #F0F0F0;
+            transition: all 0.2s;
+        }
+        .option-card:hover {
+            border-color: #AEC6CF;
+            background-color: #F7FBFF;
+        }
+        .option-card.selected {
+            border-color: #AEC6CF;
+            background-color: #E6F3FF; /* Light Blue background for selection */
+            box-shadow: 0 0 0 2px #AEC6CF;
+        }
+
+        .text-huge { font-size: 1.5rem; line-height: 2.2rem; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: #F0F8FF; }
+        ::-webkit-scrollbar-thumb { background: #AEC6CF; border-radius: 6px; border: 3px solid #F0F8FF; }
+
+        /* Print adjustments */
+        @media print {
+            .no-print { display: none !important; }
+            .print-break { page-break-inside: avoid; }
+            body { background: white; }
+            #app { box-shadow: none; border: none; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- App Container -->
+    <div id="app" class="w-full max-w-5xl h-[90vh] flex flex-col relative card overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-macaron-blue p-6 text-center relative z-10 shadow-sm">
+            <h1 class="text-3xl md:text-5xl font-black text-white tracking-widest drop-shadow-md">
+                <i class="fas fa-cogs mr-3"></i>114機械職群題庫
+            </h1>
+            <div class="absolute top-1/2 right-6 transform -translate-y-1/2 hidden md:block">
+                <span class="bg-white/30 px-4 py-2 rounded-full text-white font-bold backdrop-blur-sm">
+                    <i class="fas fa-database mr-2"></i>共 250 題
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Content (Scrollable) -->
+        <main class="flex-grow relative overflow-hidden bg-white">
+            <div id="scroll-container" class="absolute inset-0 overflow-y-auto p-6 md:p-10">
+                <!-- Content injected by JS -->
+            </div>
+        </main>
+
+        <!-- Footer (Navigation) -->
+        <footer id="quiz-footer" class="bg-gray-50 p-4 border-t-2 border-gray-100 hidden z-10">
+            <div class="max-w-4xl mx-auto flex justify-between items-center gap-4">
+                <button onclick="navPrev()" id="btn-prev" class="btn-macaron bg-gray-200 text-gray-600 px-6 py-3 rounded-2xl font-bold text-xl w-32">
+                    <i class="fas fa-chevron-left mr-2"></i>上題
+                </button>
+                
+                <div class="flex flex-col items-center">
+                    <div class="text-xs text-gray-400 font-bold tracking-widest uppercase">Question</div>
+                    <div id="tracker" class="text-3xl font-black text-macaron-dark">1 / 30</div>
+                </div>
+
+                <button onclick="navNext()" id="btn-next" class="btn-macaron bg-macaron-blue text-white px-6 py-3 rounded-2xl font-bold text-xl w-32">
+                    下題<i class="fas fa-chevron-right ml-2"></i>
+                </button>
+                
+                <button onclick="submitQuiz()" id="btn-submit" class="hidden btn-macaron bg-macaron-purple text-white px-6 py-3 rounded-2xl font-bold text-xl w-32">
+                    繳交<i class="fas fa-check ml-2"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- 1. Raw Data (250 Questions - Mechanical Cluster) ---
+        const rawTextData = `
+（3） 1. 使用同一支鉸刀，欲鉸削差異微小之孔徑時，宜選用（1）螺旋（2）固定（3）調整（4）梅花 鉸刀。 
+（2） 2. “M8×1.25”的尺寸規格是刻在螺絲攻的（1）方頭（2）柄（3）根 （4）端部。 
+（4） 3. 常用螺絲模之外形是（1）方形（2）三角形（3）稜形（4）圓形。 
+（2） 4. 鋸條的鋸齒粗細以（1）鋸條全長的總齒數表示（2）每1吋長度內的齒數表示（3）每1公厘長度內的鋸齒數表示（4）每1公分長度內的鋸齒數表示。 
+（2） 5. 鉸孔時，鉸削與退出之旋轉方向關係為（1）相反（2）相同（3）順時針轉1圈，退半圈（4）逆時針轉1圈，退半圈。 
+（3） 6. 使用銼刀銼削，回程要（1）施加壓力及推力（2）施加壓力及拉力 （3）不要施加壓力（4）加快施加壓力及速度。 
+（4） 7. 有關油石的敘述何者錯誤？（1）修整工件殘留小毛邊（2）修整刀具刃口平整度（3）結合度強度在中硬程度以上（4）平時置於水中保持濕潤度。 
+（4） 8. 公差配合中以基孔制設計時，位置公差符號必須有（1）F（2）f（3）h（4）H。 
+（4） 9. 游標高度規上用於劃線之劃線刀，其材質以右列何種為最佳 （1）中碳鋼（2）高碳鋼（3）高速鋼（4）碳化物。 
+（2） 10. 附錶高度規之劃線精度可達（1）0.005（2）0.01（3）0.02 （4）0.05 公厘。 
+（4） 11. 在砂輪上研磨鏨子，若壓力過大，鏨子會產生何種現象？ （1）正常化（2）淬火（3）表面硬化（4）退火。 
+（4） 12. 下列何者為切削加工法？（1）鍛造（2）抽製（3）鑄造（4）車削。 
+（2） 13. 車刀「斜角」之主要作用是（1）阻斷切屑（2）引導排屑（3）防止摩擦，形成刀刃（4）增加工件光度。 
+（3） 14. 車刀刃口研磨一小槽，主要目的是（1）使刃口銳利（2）增加車刀壽命（3）截斷切屑（4）提高工件表面粗糙度。 
+（4） 15. 何者非構成砂輪的要素？（1）磨料（2）結合劑（3）氣孔（4）切削劑。 
+（1） 16. 車床頂心尖端圓錐角度是（1）60度（2）45度（3）70度（4）以上皆非。 
+（1） 17. 車刀斜角加大時，下列敘述何者正確？（1）刀愈銳利（2）切削阻力增加（3）刀具不易崩損（4）切削溫度變高。 
+（2） 18. 以碳化物刀具車削外徑，刀鼻半徑愈小，工件表面粗糙度之值（1）愈小（2）愈大（3）不變（4）不一定。 
+（4） 19. 用砂布貼於銼刀下砂光車削工件，以獲得最佳之（1）同心度（2）真直度（3）直平度（4）表面光度。 
+（3） 20. 在車床上以0.01×10mm之量錶檢查偏心工件，若指針迴轉4圈，則工件之偏心距離為ˍˍˍmm（1）0.5（2）1（3）2（4）4。 
+（1） 21. 滾珠軸承一般使用的潤滑劑是（1）黃油（2）機油（3）空氣 （4）石墨。 
+（3） 22. 車床齒輪箱使用之潤滑劑宜選用（1）植物（2）動物（3）機 （4）煤油。 
+（1） 23. 主動輪24齒，從動輪48齒，當主軸旋轉一圈時，從動軸旋轉 （1）1/2（2）2/3（3）3/4（4）2 圈。 
+（3） 24. 如需裝訂成冊的圖面，則左邊的圖框線應離紙邊（1）10mm（2）15mm（3）25mm（4）35mm。 
+（1） 25. 中文工程字以何種字型為原則？（1）等線體（2）細明體（3）中圓體 （4）中明體。 
+（4） 26. 丁字尺與三角板活用，至多可將圓分為＿＿＿等分。（1）12（2）16 （3）18（4）24。 
+（1） 27. 機械圖面上的圖形比實物縮2倍，則在比例欄內應填註（1）1：2 （2）2≠1（3）1≠2（4）2：1。 
+（4） 28. 以鉛筆將設計之草圖繪製在圖紙上之工程圖稱為（1）描圖（2）鉛筆圖（3）草稿圖（4）原圖。 
+（3） 29. 表示移動後之狀態和位置時，以（1）隱藏線（2）細實線（3）假想線（4）斷裂線 繪之。 
+（4） 30. 徒手畫直線，眼睛應看（1）鉛筆（2）圖紙（3）線之起點（4）線之終點。 
+（1） 31. 150公厘的分規在最佳使用下，分規二腳分開角度，最大約為 （1）60（2）90（3）120（4）150 度。 
+（2） 32. 下列何者為等腰三角形之三邊（1）9，9，20（2）7，7，10 （3）6，6，16（4）2，2，4。 
+（3） 33. 設一圓的直徑是 10公分，則圓上的點和圓心相距（1）20 （2）10（3）5（4）4 公分。 
+（3） 34. 量角器的半圓周上刻成（1）50（2）90（3）180（4）360 個等分。 
+（2） 35. A2圖紙為A3圖紙面積的（1）1倍（2）2倍（3）3倍（4）4倍。 
+（1） 36. 鋼製手錘的手柄材料通常是（1）木材（2）鋼料（3）銅料（4）皮革。 
+（3） 37. 工場安全通道邊線以（1）藍色（2）綠色（3）黃色（4）紅色 標示。 
+（2） 38. 以規格15公分長的鋼尺量測工件，如下圖的箭頭位置的目測尺寸約為？（1）5.75mm（2）57.5mm（3）57mm（4）58mm。 
+（3） 39. 一般表面粗糙度的單位為（1）cm（2）mm（3）m（4）nm。 
+（3） 40. 螺絲起子的規格是以（1）柄長（2）全長（3）桿長（4）桿徑表示。 
+（1） 41. 三角形包括尖端向下及向上在工業安全標示之意義為（1）警告（2）禁止（3）指示（4）一般說明及提示。 
+（2） 42. 可伸到狹窄空間內進行夾持作業的手鉗是（1）鋼絲鉗（2）尖嘴鉗（3）斜口鉗（4）鯉魚鉗。 
+（2） 43. 螺距4公厘的單線螺紋，旋轉5圈，則前進（1）10公厘（2）20公厘（3）40公厘（4）60公厘。 
+（4） 44. 一般鉗工虎鉗上之螺桿其螺紋為（1）三角螺紋（2）鋸齒形螺紋（3）梯形螺紋（4）方螺紋。 
+（4） 45. 劃線針常以（1）純鐵（2）鑄鐵（3）低碳鋼（4）工具鋼 製成。 
+（4） 46. 劃線精度為0.02公厘時，劃線工具應選用（1）劃線台、鋼尺（2）分規、鋼尺（3）圓規、鋼尺（4）游標高度規。 
+（3） 47. 一般銼刀係以下列何種材料製造（1）低碳鋼（2）銅（3）碳工具鋼（4）鋁。 
+（2） 48. 粗銼削鋼料常用的銼刀，宜選用切齒之形狀為（1）單切齒（2）雙切齒（3）曲切齒（4）棘齒。 
+（4） 49. 銼削軟金屬，應選用（1）直切齒銼刀（2）單切齒銼刀（3）雙切齒銼（4）曲切齒銼刀。 
+（4） 50. 銼削木材宜選用（1）單切齒銼刀（2）雙切齒銼刀（3）曲切齒銼刀（4）棘齒銼刀。 
+（2） 51. 銼削外圓角時，以下列何種量具檢驗半徑（1）圓規（2）圓弧規（3）角尺（4）柱塞規。 
+（2） 52. 一般高速鋼鋸條，其表面塗漆的顏色是（1）白色（2）藍色（3）紫色（4）黑色。 
+（2） 53. 一般鑽孔鑽頭，其鑽槽數為（1）1槽（2）2槽（3）3槽（4）4槽。 
+（1） 54. 鑽削時，若鑽頭靜點不在鑽頭中心線，會造成（1）孔徑擴大（2）孔徑較精確（3）孔徑縮小（4）較易鑽削。 
+（4） 55. 拆裝六角窩頭螺絲，應選用（1）活動（2）扭矩（3）管子（4）六角扳手。 
+（1） 56. 下列何種手鉗具有極大之夾持力？ （1）虎鉗夾鉗（2）克絲鉗（3）魚口鉗（4）以上皆是。 
+（1） 57. 活動板手用力時，應用（1）固定鉗口（2）活動鉗口（3）兩者皆可用力（4）以上皆非。 
+（1） 58. 硬鎚頭部之材料為（1）工具鋼（2）銅 （3）鉛（4）以上皆是。 
+（3） 59. 下列哪種銼刀無法做平面銼削？（1）三角銼（2）平銼（3）圓銼 （4）半圓銼。 
+（1） 60. 銼刀銼齒間的金屬切屑，常以何者去除？（1）銅刷（2）抹布（3）毛刷（4）劃線針。 
+（4） 61. 銼削時在銼刀面塗上粉筆，其目的是（1）省力（2）保護銼齒（3）增加摩擦力（4）銼屑容易掉落。 
+（3） 62. 虎鉗鉗口之齒形紋路其功用（1）增加硬度（2）減少磨耗（3）易夾緊工件（4）增加美觀。 
+（3） 63. 檢查銼削平面最簡易、快速的量具是（1）銼刀邊（2）平行塊（3）刀口角尺（4）光學尺。 
+（2） 64. 游標式高度規其公制精度為（1）0.01mm（2）0.02mm（3）0.05mm（4）以上皆非。 
+（3） 65. 劃線針使用時，桿需朝尺邊外側傾斜約（1）5°（2）10°（3）15° （4）25°。 
+（1） 66. 一般高速車床變速時，其正確的操作是（1）主軸停止後變速（2）轉動間變速（3）主軸停止動前變速（4）車床起動後瞬間變速。 
+（1） 67. 車床之主軸方向稱為（1）縱向（2）橫向（3）徑向（4）周向。 
+（1） 68. 從事車床工作，不得使用（1）手套（2）安全眼鏡（3）安全鞋（4）耳塞。 
+（3） 69. 配置車刀的順序應依（1）工件形狀（2）工件材質（3）工作程序 （4）車床狀況。 
+（1） 70. 一般切削速度之單位為（1）m/min（2）mm/min（3）m/sec （4）mm/sec。 
+（3） 71. 下列何者為影響車削阻力最無關的因素？（1）車削深度（2）進給率 （3）車削速度（4）車刀圓鼻半徑。 
+（1） 72. 車床工作，所謂“進刀”是指（1）工件迴轉一圈，車刀移動的距離 （2）工件每分鐘經過刀刃的長度（3）車刀切入工件的深度（4）車刀單位時間切除工件的體積。 
+（2） 73. 車削工件常採用去角（倒角）方式去除毛邊，一般去角的角度約為 （1）30°（2）45°（3）60°（4）75°。 
+（3） 74. 車削外徑前先車削端面，其原因係為（1）整齊（2）美觀（3）定長度之基準面（4）精車削車刀不易損壞。 
+（2） 75. 在車床上測量外圓之階級長度，最合適的方法是（1）以游標卡尺深度 桿量測（2）以游標卡尺兩階段差量測（3）以外徑分厘卡量測（4）以槓桿量表量測。 
+（3） 76. 國際標準組織之簡稱為（1）OIS（2）SIO（3）ISO（4）IOS。 
+（4） 77. 實際長度為50 mm，若圖面以100 mm長繪之，則比例為（1）1：2 （2）1：20（3）20：1（4）2：1。 
+（2） 78. A2 圖紙可裁成A4 圖紙（1）2 張（2）4 張（3）6 張（4）8 張。 
+（1） 79. 圖紙裝訂成冊摺疊時，圖面之標題欄必須摺在（1）上面（2）背面（3）內側（4）底面。 
+（3） 80. 描圖紙之厚度單位為（1）g/cm2（2）g/ mm2（3）g/m2（4）g/dm2。 
+（4） 81. 分規的用途是（1）畫圓（2）轉量長度與畫圓（3）等分與畫圓（4）等分與轉量長度。 
+（1） 82. 使用丁字尺及一組三角板至多可將一圓分成幾等分？（1）24（2）12（3）9（4）6。 
+（3） 83. 工程製圖常用比例為（1）1、2、3（2）1、3、5（3）2、5、10 （4）5、10、15 倍數的比例。 
+（4） 84. 製造機件所用的圖，通常稱為（1）設計圖（2）機構圖（3）製配圖 （4）工作圖。 
+（2） 85. 製圖用紙大小297×420 mm 的圖紙，稱為（1）A2（2）A3（3）A4 （4）A5 圖紙。 
+（3） 86. 量角器可測量到的最小尺度為（1）5′（2）0.5°（3）1° （4）2°。 
+（3） 87. 可延長至圖外作為尺度界線的是（1）割面線（2）隱藏線（3）中心 線（4）剖面線。 
+（3） 88. 線條規範中，中線用於（1）實線（2）折斷線（3）隱藏線（4）節線。 
+（3） 89. 不規則連續細實線為（1）輪廓線（2）指線（3）折斷線（4）隱藏 線。 
+（1） 90. 視圖內作旋轉剖面時，外形輪廓用（1）細實線（2）實線（3）虛線 （4）點線 畫出。。 
+（2） 91. 下列哪一個非技術型高中機械群的科別？（1）鑄造科（2）動力機械科（3）機電科（4）製圖科。 
+（4） 92. 下列敘述何者正確？（1）進入實習工場實作時，頭髮遮蓋住眼睛時， 可以不予理會（2）操作車床進行加工時，可以不戴安全眼鏡（3）操 作會旋轉的機臺(如鑽床)進行加工時可以戴手套（4）進入實習工場實 作時，必須穿著工作服、工作鞋。 
+（3） 93. 下列哪一個物品不能稱之為機械？（1）汽車（2）車床（3）扳手 （4）發電機。 
+（2） 94. 下列敘述何者屬於非傳統加工？（1）車床（2）放電加工（3）鉋床 （4）鑄造。 
+（2） 95. 下列何者非機電整合的應用？（1）數位照相機（2）傳統工具機（3）機器人（4）夾娃娃機。 
+（4） 96. 下列何種平面較適宜做為基準面？（1）狹長面（2）圓弧面（3）曲 面（4）較大的平面。 
+（4） 97. 游標高度規應保存在（1）灰塵少（2）濕氣低（3）無陽光直射（4）以上皆是  之場所。 
+（3） 98. Ｖ形枕中央之Ｖ槽之角度為（1）30°（2）60°（3）90°（4）以上皆 非。 
+（4） 99. 游標高度規劃線條時，尺寸不正確原因為（1）劃刀尖端崩裂（2）平 板上有鐵屑（3）游標高度規未歸零（4）以上均可能。 
+（2） 100. 劃線針材料多為（1）純鐵（2）工具鋼（3）鑄鐵（4）銅。 
+（2） 101. 切削時其產生的切削熱，大部份遺留在（1）工件（2）切屑（3）刀具 （4）頂心。 
+（1） 102. 下列何者宜用於去除去角的小毛邊？（1）油石（2）銼刀（3）砂紙 （4）刮刀。 
+（1） 103. 車床加工要得到較精細的加工面，應選用（1）小切深、高轉速（2）小切深、低轉速（3）大切深、低轉速（4）大切深、高轉速。 
+（2） 104. 一般公制外分厘卡之外套筒旋轉一週，其心軸進退（1）1（2）0.5 （3）0.02（4）0.01  mm。 
+（4） 105. 游標卡尺在本尺上每刻劃的尺度為（1）0.02（2）0.05（3）0.5（4）1 mm。 
+（3） 106. 下列線條中如在圖形上重覆時，最優先者為（1）隱藏線（2）中心線 （3）粗實線（4）假想線。 
+（3） 107. 假想線應以（1）一點細鏈線（2）細實線（3）兩點細鏈線（4）徒手細實線 表示。 
+（4） 108. 表示參考用的鄰接部分以（1）細實線（2）隱藏線（3）中心線（4）假想線 繪之。 
+（1） 109. 割面線之中段部分為（1）一點細鏈線（2）細實線（3）虛線（4）兩點細鏈線。 
+（3） 110. 尺度界線以（1）粗線（2）中線（3）細線（4）虛線 繪製。 
+（4） 111. 選用手弓鋸條最主要的考慮因素是（1）鋸條寬度（2）鋸條長度 （3）固定孔尺度（4）鋸條齒數。 
+（1） 112. 車床踩煞車突然失效的原因為煞車皮帶（1）斷裂（2）磨耗（3）已有油污（4）有硬塊。 
+（3） 113. 手鎚柄部在1/3處縮小，主要目的是（1）美觀（2）減輕重量（3）減震（4）易握持。 
+（3） 114. 切斷工作屬於（1）端面粗車削（2）精車削（3）粗車削（4）端面精車削。 
+（3） 115. 依中國國家標準，螺紋為左螺紋者須加註（1）R（2）H（3）L（4）A。 
+（3） 116. 適當的車削速度可以提高刀具之（1）強度（2）精度（3）壽命（4）切削阻力。 
+（4） 117. 模具上之定位銷孔，一般需經何種方式加工？（1）磨削（2）搪削 （3）拉削（4）鉸削。 
+（4） 118. 閱讀工作圖的第一步驟是瞭解圖面的（1）材料（2）加工方法（3）表面符號（4）投影法。 
+（3） 119. 左圖之符號表示（1）第一角投影法（2）第二角投影法（3）第三角投影法（4）第四角投影法。 
+（4） 120. 工作圖中常用的三視圖是（1）前視圖、右側視圖、左側視圖（2）前視圖、俯視圖、仰視圖（3）俯視圖、右側視圖、左側視圖（4）前視圖、俯視圖、右側視圖。 
+（2） 121. 正三角形每一內角為（1）30（2）60（3）90（4）120。 
+（3） 122. 盲孔攻螺紋工作時，導致螺絲攻折斷的原因是（1）螺絲攻太硬（2）未使用第一攻（3）螺絲攻與孔底部碰觸（4）螺絲導孔過大。 
+（1） 123. 實心球體可用（1）單視圖（2）二視圖（3）三視圖（4）輔助視圖 表示。 
+（4） 124. 加工過程中，應倒轉退出刀具的加工是（1）鑽孔（2）鉸孔（3）鏜孔（4）攻螺紋。 
+（1） 125. 左圖正確右側視圖為（1）（2） （3） （4）。 
+（2） 126. 右列正確標註尺度數字方向為（1）（2）（3）（4）。 
+（2） 127. 下列正確角度標註為（1）（2）（3）（4）。 
+（4） 128. 關於車床規格表示法，一般以ˍˍˍ之最大距離（1）刀具溜座移動 （2）橫向進刀移動（3）複式刀座移動（4）二頂心間。 
+（4） 129. 錐度符號表示法，下列何者正確？（1） （2）（3） （4） 。 
+（2） 130. 游標卡尺的游尺太鬆動，則應（1）敲擊滑道使縮小間隙（2）調整滑道間隙螺絲（3）調整固定螺絲的鬆緊度（4）不必調整。 
+（2） 131. 分厘卡歸零時，發現襯筒與套筒0點刻劃線偏量約為0.01mm，此時宜調整（1）套筒（2）襯筒（3）棘輪（4）主軸固定鎖。 
+（2） 132. 檯式鑽床之鑽頭夾頭一般為（1）2（2）3（3）4（4）5 爪。 
+（2） 133. 四角錐體是（1）3（2）5（3）6（4）7 面體。 
+（2） 134. 公制工作圖中，半徑之表示符號是（1）T（2）R（3）f（4）D。 
+（2） 135. 一般靈敏（桌上）鑽床使用之直柄鑽頭最大直徑為（1）8（2）13 （3）16（4）20公厘。 
+（4） 136. 一投影箱展開後可得視圖共有（1）3（2）4（3）5（4）6 個視圖。 
+（2） 137. 左圖為正投影三視圖，則其立體圖為？（1）   （2）  （3） （4）  。 
+（3） 138. A0的圖紙可裁製A2大小計幾張（1）2（2）8（3）4（4）3。 
+（3） 139. 下列線條是屬於中線的為（1）中心線（2）尺度線（3）隱藏線（4）輪廓線。 
+（4） 140. 尺度記入中以“□”符號，代表（1）缺口（2）平面（3）端面（4）方形。 
+（4） 141. 尺度線及其尺度界線均為（1）同等的粗實線（2）同等的中線（3）不同粗細的線（4）同等的細線。 
+（3） 142. 中國國家標準規格之簡稱為（1）AS（2）JIS（3）CNS（4）DIN。 
+（1） 143. 一般公制10公厘之內的鑽頭，每隔幾公厘有一支？（1）0.1（2）0.5（3）1（4）1.5。 
+（3） 144. 正投影之投射線均與投影面（1）傾斜（2）平行（3）垂直（4）相交。 
+（2） 145. 註解之指線為（1）直線（2）折線（3）曲線（4）鋸齒線。 
+（1） 146. 製圖用紙短邊與長邊之比為（1）1: 2（2）1: 3（3）3 :1（4）2 :1。 
+（4） 147. 畫直線時，鉛筆應向運筆方向傾斜，其與桌面之傾斜角約為（1）15°（2）30°（3）45°（4）60°。 
+（4） 148. 砂輪進行音響試驗宜採用何種工具？（1）鐵桿（2）銅棒（3）鋁棒 （4）木柄。 
+（2） 149. 製圖用紙A0規格之面積為（1）1/3（2）1（3）1/2（4）2 m2。 
+（1） 150. 第三角投影法中，排列在前視圖上方者為（1）俯視圖（2）仰視圖 （3）右側視圖（4）左側視圖。 
+（1） 151. 線段之垂直平分線是以線段端點為圓心，取＿＿＿線段之半為半徑作圓弧，連接兩弧之交點，即為所求（1）大於（2）等於（3）小於（4）任意。 
+（4） 152. 車床上鑽中心孔、攻螺紋等工作，主要使用到（1）複式刀座（2）導螺桿（3）橫向進給機構（4）尾座。 
+（3） 153. 工程圖如未註明單位是指（1）公尺（2）公分（3）公厘（4）公克。 
+（4） 154. 不共線上的任意三點可決定一個（1）雙曲面（2）拋物面（3）單曲面（4）平面。 
+（2） 155. 加工圓形桿件最佳的工具機是（1）鋸床（2）車床（3）銑床（4）鉋床。 
+（4） 156. 利用一組（兩塊）三角板配合丁字尺可畫出＿＿＿的倍角（1）40° （2）35°（3）25°（4）15°。 
+（4） 157. 細鏈線不可用以繪製（1）中心線（2）節線（3）假想線（4）尺度線。 
+（3） 158. 一般高速車床不能做何種加工？（1）輥花（2）車螺紋（3）車齒形 （4）車削內孔。 
+（1） 159. 第三角畫法中物體與投影面之關係為（1）視點→投影面→物體（2）物體→投影面→視點（3）投影面→物體→視點（4）視點→物體→投影面。 
+（3） 160. 指示量錶能檢驗微小的尺寸變化，其放大機構採用（1）槓桿（2）齒輪組（3）槓桿及齒輪組（4）電路訊號  放大。 
+（2） 161. 三角板，其中兩角分別為90°、45°，則另一角為（1）30°（2）45° （3）90°（4）60°。 
+（4） 162. 車床構造中，縱向進刀大手輪裝置在何處？（1）車頭（2）床台 （3）床鞍（4）床帷。 
+（3） 163. 下列量具何者可調整歸零？（1）卡鉗（2）鋼尺（3）分厘卡（4）角尺。 
+（4） 164. 中心線是用於表示物體的（1）大小（2）直徑（3）高度（4）對稱軸。 
+（1） 165. 車床夾頭夾持已經加工過的工件時，在爪口與工件間放置護片，下列各種材料，哪一種做為護片效果最佳？（1）銅片（2）不銹鋼片（3）鐵片（4）鋁片。 
+（4） 166. 研磨碳化物刀具之綠色砂輪，其磨料代號為（1）A（2）WA（3）C （4）GC。 
+（4） 167. 二圓相互內切，則連心線長度等於（1）兩直徑和（2）兩直徑差 （3）兩半徑和（4）兩半徑差。 
+（1） 168. 欲擦去的線段靠近他線段時可將＿＿＿覆上，露出應擦去之部分擦拭即可（1）擦線板（2）鋼尺（3）丁字尺（4）三角板。 
+（2） 169. 日本國家標準簡稱（1）JSI（2）JIS（3）ISJ（4）IJS。 
+（4） 170. 一般半圓形量角器之半圓周上，其每一刻劃的角度是（1）1/12度（2）1/6 度（3）1/2度（4）1度。 
+（1） 171. 下列車床加工方法中，何者的主軸轉數最低？（1）壓花（2）車削端面（3）車削外徑（4）車削內徑。 
+（3） 172. 車床開動前之良好習慣應先做（1）夾持工件（2）調整進給率（3）潤滑及油面檢查（4）夾持刀具。 
+（2） 173. 一般車床使用與保養完後，刀具溜座應置於（1）靠近頭座（2）靠近尾座（3）床台中央（4）床台中間偏左邊。 
+（4） 174. 麻花鑽頭又稱為（1）直槽（2）中心（3）扁頭（4）扭轉鑽頭。 
+（2） 175. 中華民國國家標準之簡稱為（1）CSN（2）CNS（3）SCN（4）NCS。 
+（2） 176. 砂輪機常用的砂輪修整工具為（1）廢砂輪（2）砂輪修整器（3）鑽石砂輪（4）廢車刀。 
+（1） 177. 低速車削進行中，聞到燒焦的味道，最可能的原因是（1）皮帶鬆滑 （2）尾座頂心過熱（3）切削劑蒸發（4）齒輪箱潤滑油不足。 
+（1） 178. 尺寸為 40+0.03 -0.02 ，下列何者不合格？（1）40.05（2）40.03（3）40.01 （4）39.98。 
+（3） 179. 工作圖上尺寸未標註公差，表示（1）沒有公差（2）自設公差（3）採用通用公差（4）採用專用公差。 
+（4） 180. 車床工作中，利用煞車的目的是（1）防止刀尖破裂（2）保護工件 （3）防止頂心鬆脫（4）緊急停車。 
+（4） 181. 下列何種金屬的硬度最高（1）鋁（2）銅（3）鐵（4）鋼。 
+（2） 182. 決定鑽削速度的主要因素之一，是工件的（1）表面粗糙度（2）硬度 （3）尺度（4）形狀。 
+（2） 183. 靈敏鑽床之主軸與鑽頭，在施壓力鑽削時，即停止旋轉，可能的原因是（1）皮帶太緊（2）皮帶太鬆（3）鑽頭夾太緊（4）電源線接反。 
+（2） 184. 鑽削鋼料之鑽頭頂角為（1）100（2）118（3）125（4）145 度。 
+（1） 185. 車床尾座無法固定時，應調整（1）尾座下方之螺帽（2）尾座手輪 （3）尾座左側螺絲（4）尾座右側螺絲。 
+（4） 186. 下列何者是使用鑽模鑽孔的優點？（1）須劃線（2）須打中心（3）須鑽導孔（4）適合大量生產。 
+（1） 187. 鑄鐵平板表面刮花的目的是（1）儲存潤滑油（2）美觀（3）防止光線折射（4）增加摩擦力。 
+（1） 188. 剖視圖中的割面線是表示機件（1）切的位置（2）對稱部份（3）空心部份（4）實心部份。 
+（1） 189. 機件被一割面完全剖切稱為（1）全剖面（2）半剖面（3）局部剖面 （4）移出剖面。 
+（1） 190. 常用於切削工件之端面、外圓、內圓、錐度、偏心及螺紋等工作的工具機是（1）車床（2）牛頭鉋床（3）銑床（4）平面磨床。 
+（4） 191. 鑽頭即將貫穿工件時，為避免卡住鑽頭，鑽削的壓力應（1）一致 （2）不加壓（3）增加（4）減輕。 
+（4） 192. 鑽削中鑽頭與工件因磨擦生熱，欲降低鑽頭與工件之溫度，下列何種作法最適宜？（1）增加轉數（2）加大進刀量（3）減少進刀量（4）加切削劑。 
+（4） 193. 等角投影是屬於（1）垂直投影（2）斜投影（3）水平投影（4）正投影。 
+（3） 194. 用於現場檢驗或組合尺寸所使用的塊規等級是（1）00級（2）0級（3）1級（4）2級。 
+（3） 195. 研磨鑽頭時，砂輪面應與鑽頭中心線成（1）30（2）40（3）59 （4）90。 
+（2） 196. 下列何種孔加工，不可以用鉸刀直接鉸孔？（1）鑽穿之孔（2）未加工鑄件胚孔（3）錐度銷孔（4）車削過之孔。 
+（2） 197. 鑽削鋼料時加切削劑，下列何者不是其主要功用？（1）冷卻工件 （2）協助斷屑（3）潤滑作用（4）冷卻鑽頭。 
+（1） 198. 300mm鋼尺之最小刻度為（1）0.5㎜（2）1㎜（3）1.5㎜（4）2㎜。 
+（4） 199. 製圖的要求首重（1）清晰（2）整潔（3）迅速（4）正確。 
+（2） 200. 電燈炮頭上使用的螺紋型式為（1）三角形螺紋（2）淺圓螺紋（3）梯形螺紋（4）鋸齒形螺紋。 
+（3） 201. 銼刀的木柄前端加套一個金屬環有何功用？（1）較易握持（2）美觀（3）防止木柄破裂（4）增加銼削速度。 
+（4） 202. 劃線針的刀尖通常經過何種處理後研磨而成？（1）銲接（2）正常化（3）退火（4）淬火。 
+（4） 203. 一般外分厘卡能直接量測工件的（1）深度（2）孔徑（3）節徑（4）軸徑。 
+（2） 204. 手工鉸削之孔徑為8公厘，則其鑽頭直徑為（1）8.0 （2）7.8 （3）7.6 （4）7.4 公厘。 
+（4） 205. 砂輪修整器通常使用下列何種材質製作？（1）碳化物（2）高速鋼 （3）氧化鋁（4）鑽石。 
+（2） 206. 切削劑之選用與下列何者有關？（1）鉸刀材質（2）工件材質（3）鉸削深度（4）鉸孔孔徑。 
+（1） 207. 機械螺絲攻為（1）1（2）2（3）3（4）4 支一組。 
+（3） 208. 鑽削大孔徑，先鑽導孔主要是為避免（1）切邊磨損（2）連續切屑（3）大鑽頭之靜點阻力（4）鑽得太快。 
+（1） 209. 使用三爪連動夾頭夾持工件，最大優點是（1）夾持工件較快速（2）適於大型與粗重工件之夾持（3）夾持與校正精確度高（4）最適於偏心量較大工件。 
+（1） 210. 同心度之幾何公差符號為（1） （2） （3） （4） 。 
+（2） 211. 畫許多同心圓時，應從______先畫（1）最大的圓（2）最小的圓 （3）任一個圓（4）最中間的圓。 
+（1） 212. 砂輪的音響檢查是檢查什麼（1）砂輪有無裂痕（2）砂輪的硬度 （3）砂輪的材質（4）砂輪有無平整。 
+（2） 213. 車床上作偏心校正、劃線工作宜選下列何種夾頭夾持？（1）三爪連動夾頭（2）四爪獨立夾頭（3）雞心夾頭（4）鑽頭夾頭。 
+（1） 214. 拆裝螺帽時，最容易損壞螺帽的扳手是（1）活動扳手（2）開口扳手 （3）梅花扳手（4）套筒扳手。 
+（3） 215. 攻螺紋時檢查螺絲攻垂直度、宜選用的量具是（1）鋼尺（2）圓筒直角規（3）角尺（4）游標卡尺。 
+（1） 216. 重新裝置三爪連動夾頭之夾爪時，應依下列何種夾爪號碼的順序裝配，方為正確？（1）1、2、3（2）3、2、1（3）2、1、3（4）2、3、1 。 
+（3） 217. 描圖紙是一種？（1）感光紙（2）牛皮紙（3）半透明薄紙（4）影印紙。 
+（3） 218. 攻螺紋時，攻進 3/4 轉即倒轉 1/4 轉，其作用為（1）使潤滑油進入（2）使螺紋加深（3）使切屑斷裂（4）使螺絲攻不易磨損。 
+（1） 219. 攻不通孔螺紋時，加工順序應為（1）依序使用三支螺絲攻（2）只須使用第一攻（3）只須使用第三攻（4）使用第一、二攻。 
+（4） 220. 指示量錶之指針對零，最簡易之方式為（1）提升量錶觸桿（2）調整磁性台架高度（3）旋轉錶殼（4）旋轉針盤面。 
+（2） 221. 砂輪檢測除了做音響檢查外，還需做平衡試驗，其目的為（1）檢查砂輪內部是否有裂痕（2）檢查砂輪是否偏重（3）查砂輪面是否平整 （4）檢查砂輪面是否填塞。 
+（2） 222. 車削一中碳鋼圓桿之車削速度，粗車削應較精車削為（1）高（2）低 （3）相同（4）隨意。 
+（1） 223. 鑽頭兩鑽槽間之實體部分稱為（1）鑽腹（2）鑽頂（3）鑽身（4）鑽唇。 
+（1） 224. "P"類碳化物刀具適用於何種材料切削？（1）碳鋼（2）不銹鋼 （3）鑄鐵（4）黃銅。 
+（1） 225. 攜帶工具最好（1）放在工具箱（2）放在口袋（3）繫在腰帶（4）拿在手上。 
+（4） 226. 中華民國國家標準規定正投影法為（1）第一角法（2）第二角法 （3）第三角法（4）第一角法或第三角法皆可。 
+（1） 227. 工件車削時產生火花，以ˍˍˍ較為可能（1）轉速過高（2）材料含碳量過低（3）進給量過大（4）進給量過小。 
+（2） 228. 鑽削時，下列何者不是造成鑽頭容易變鈍的原因？（1）工件太硬（2）工件太小（3）轉數太高（4）未使用切削液。 
+（4） 229. 下列何種量具適用於大量且快速的精密圓棒直徑與真圓性查核檢測？ （1）游標尺（2）分厘卡（3）柱塞規（4）環規。 
+（4） 230. 下列何者不是花崗岩平板之優點？（1）耐磨損（2）不生鏽（3）硬度高（4）易起毛邊。 
+（4） 231. 下列之製圖鉛筆筆心，何者係以由軟至硬之順序排列？ （1）B、F、HB、H（2）H、HB、F、B（3）H、F、HB、B （4）B、HB、F、H。 
+（2） 232. 下列圖形何者可直接用三角板（30、45、60）繪出（1）正五邊形 （2）正六邊形（3）正七邊形（4）正八邊形。 
+（1） 233. 雙切粗齒平銼刀宜用於銼削（1）一般平面（2）內圓孔（3）特精細面（4）內曲面。 
+（3） 234. 游標卡尺量測工件外徑時，施加過大之夾緊力將量得（1）正確尺寸 （2）偏大尺寸（3）偏小尺寸（4）與施力大小無關。 
+（2） 235. 使用三角板和鉛筆畫線條時，為求線條色澤均勻、粗細相同，畫線時鉛筆應沿行進方向（1）筆身維持不變（2）緩慢轉動筆身（3）施加不同力量（4）使用不同硬度的鉛筆。 
+（1） 236. 一般高速車床變速時，其正確的操作是 （1）主軸停止後（2）於轉動間（3）主軸停止轉動前（4）車床起動後瞬間。 
+（4） 237. 車削鑄鐵時應採用之切削劑為（1）機油（2）調水油（3）煤油（4）不用切削劑。 
+（1） 238. 繪鉛筆工程圖最先繪製的線是（1）中心線（2）虛線（3）剖面線（4）輪廓線。 
+（1） 239. 控制機械緊急停止之樞鈕，其工業安全顏色應以何者表示為正確？ （1）紅色（2）黃色（3）綠色（4）藍色。 
+（3） 240. 砂輪機上研磨車刀會產生熱，一般係用水來（1）退火（2）淬火 （3）冷卻（4）局部硬化。 
+（1） 241. 任意一個角兩等分，要用（1）圓規、三角板（2）量角器（3）鋼尺（4）量角器、三角板。 
+（1） 242. 下列何種銼刀，最適合作精光推銼法？（1）單切齒（2）雙切齒 （3）曲切齒（4）棘齒。 
+（3） 243. 下列鋼尺的操作方式，何者正確？（1）尺端受損不影響量測（2）可分辨出0.1mm之尺寸（3）量測尺寸時，視線須垂直尺面（4）可用來量測垂直度。 
+（4） 244. 公制三角螺絲的牙角為（1）29度（2）30度（3）55度（4）60度。 
+（1） 245. 游標卡尺測量內孔時，測爪須與中心線應（1）對齊且平行（2）傾斜且平行（3）偏位（4）不必考慮。 
+（4） 246. 下列何項材料適於做為磨石磨料？（1）鋼砂（2）鋼玉（3）石英 （4）碳化矽。 
+（4） 247. 綠色碳化矽磨料之砂輪，其用途係用以研磨（1）高碳鋼（2）高速鋼 （3）工具鋼（4）碳化物刀具。 
+（3） 248. 砂輪規格表示方法應是（1）厚度外徑孔徑（2）厚度孔徑外徑 （3）外徑厚度孔徑（4）外徑孔徑厚度。 
+（4） 249. 下列何種工具不適用在圓棒工件之端面劃線？（1）磁性V形枕 （2）V形枕及C形夾（3）V形槽平行箱（4）角板。 
+（1） 250. 一直線與圓周相切於一點，此點和圓心連線與該直線的夾角應為 （1）90°（2）60°（3）45°（4）30°。
+`;
+
+        // --- 2. Parser Logic ---
+        function parseRawData(text) {
+            const blocks = text.split(/(?=\n[\(（]\d[\)）]\s*\d+\.)/g);
+            
+            const parsed = [];
+
+            blocks.forEach(block => {
+                block = block.trim();
+                if (!block) return;
+
+                // Extract Answer Index (0-3)
+                const ansMatch = block.match(/^[\(（](\d)[\)）]/);
+                let ansIdx = 0;
+                if (ansMatch) {
+                    ansIdx = parseInt(ansMatch[1]) - 1;
+                }
+
+                // Extract Question Number
+                const numMatch = block.match(/^\s*[\(（]\d[\)）]\s*(\d+)\./);
+                let qNum = 0;
+                if (numMatch) {
+                    qNum = parseInt(numMatch[1]);
+                }
+
+                // Remove the header part to process Question Text and Options
+                let content = block.replace(/^[\(（]\d[\)）]\s*\d+\.\s*/, '');
+
+                // Split Options using (1), (2), etc markers
+                const parts = content.split(/[\(（]([1-4])[\)）]/);
+                
+                if (parts.length >= 1) {
+                    const qText = parts[0].trim();
+                    const options = [];
+
+                    for(let i=1; i<=4; i++) {
+                        const idx = parts.indexOf(String(i));
+                        if(idx !== -1 && idx + 1 < parts.length) {
+                            options.push(parts[idx+1].trim());
+                        }
+                    }
+
+                    if (options.length === 4) {
+                        parsed.push({
+                            id: qNum,
+                            question: qText,
+                            options: options,
+                            answerIndex: ansIdx
+                        });
+                    }
+                }
+            });
+            return parsed;
+        }
+
+        const questionBank = parseRawData(rawTextData);
+
+        // --- 3. App State ---
+        let appState = {
+            currentScreen: 'START',
+            userName: '',
+            quizQuestions: [],
+            currentQIdx: 0,
+            timer: 0,
+            timerInterval: null
+        };
+
+        // --- 4. Logic Functions ---
+
+        function init() {
+            renderStartScreen();
+        }
+
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function startQuiz(mode, param) {
+            const name = document.getElementById('input-name').value.trim();
+            if (!name) {
+                alert("請輸入姓名！");
+                return;
+            }
+            appState.userName = name;
+
+            let selectedQs = [];
+
+            if (mode === 'random') {
+                const count = parseInt(document.getElementById('input-count').value);
+                if(count < 1 || count > questionBank.length) {
+                    alert("題數錯誤");
+                    return;
+                }
+                selectedQs = shuffle([...questionBank]).slice(0, count);
+            } else if (mode === 'range') {
+                const [start, end] = param.split('-').map(Number);
+                selectedQs = questionBank.filter(q => q.id >= start && q.id <= end);
+                selectedQs = shuffle(selectedQs); // 題目隨機排列
+            }
+
+            if (selectedQs.length === 0) {
+                alert("該範圍無題目！");
+                return;
+            }
+
+            // Prepare Quiz Data (Shuffle Options)
+            appState.quizQuestions = selectedQs.map(q => {
+                let opts = q.options.map((txt, idx) => ({ text: txt, originalIdx: idx }));
+                opts = shuffle(opts); // 選項隨機排列
+                return {
+                    originalQ: q,
+                    options: opts,
+                    userAns: null
+                };
+            });
+
+            appState.currentQIdx = 0;
+            appState.timer = 0;
+            appState.currentScreen = 'QUIZ';
+
+            if (appState.timerInterval) clearInterval(appState.timerInterval);
+            appState.timerInterval = setInterval(() => {
+                appState.timer++;
+                const tEl = document.getElementById('timer-display');
+                if(tEl) tEl.innerText = formatTime(appState.timer);
+            }, 1000);
+
+            renderQuiz();
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function selectOption(idx) {
+            appState.quizQuestions[appState.currentQIdx].userAns = idx;
+            renderQuiz();
+        }
+
+        function navPrev() {
+            if (appState.currentQIdx > 0) {
+                appState.currentQIdx--;
+                renderQuiz();
+            }
+        }
+
+        function navNext() {
+            if (appState.currentQIdx < appState.quizQuestions.length - 1) {
+                appState.currentQIdx++;
+                renderQuiz();
+            }
+        }
+
+        function submitQuiz() {
+            const unanswered = appState.quizQuestions.filter(q => q.userAns === null).length;
+            if (unanswered > 0) {
+                if(!confirm(`還有 ${unanswered} 題未作答，確定交卷？`)) return;
+            }
+            clearInterval(appState.timerInterval);
+            renderResult();
+        }
+
+        // --- 5. Render Functions ---
+
+        function renderStartScreen() {
+            const container = document.getElementById('scroll-container');
+            document.getElementById('quiz-footer').classList.add('hidden');
+            
+            // Generate Range Options (every 25)
+            let rangeButtons = '';
+            const total = 250;
+            const step = 25;
+            for(let i=1; i<=total; i+=step) {
+                let end = Math.min(i + step - 1, total);
+                rangeButtons += `
+                    <button onclick="startQuiz('range', '${i}-${end}')" class="bg-macaron-blue text-white py-3 rounded-xl font-bold hover:opacity-90 shadow-sm transition transform hover:-translate-y-1">
+                        第 ${i} ~ ${end} 題
+                    </button>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto text-center space-y-8 animate-fade-in py-10">
+                    <div class="bg-white p-8 rounded-[30px] border-4 border-dashed border-macaron-blue/30">
+                        <i class="fas fa-user-cog text-6xl text-macaron-blue mb-6"></i>
+                        <h2 class="text-2xl font-bold text-gray-600 mb-6">考生登入</h2>
+                        <input type="text" id="input-name" class="w-full text-center text-2xl p-4 border-2 border-gray-200 rounded-2xl focus:border-macaron-blue outline-none bg-gray-50" placeholder="請輸入姓名">
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Random Mode -->
+                        <div class="bg-white p-6 rounded-[30px] shadow-sm border border-gray-100">
+                            <div class="bg-macaron-pink w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl mx-auto -mt-12 mb-4 shadow-md">
+                                <i class="fas fa-dice"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-600 mb-4">隨機抽題</h3>
+                            <div class="flex items-center justify-center gap-2 mb-4">
+                                <input type="number" id="input-count" value="25" min="1" max="250" class="w-24 text-center text-xl p-2 border-2 border-gray-200 rounded-xl">
+                                <span class="text-gray-500 font-bold">題</span>
+                            </div>
+                            <button onclick="startQuiz('random')" class="w-full bg-macaron-pink text-white py-3 rounded-xl font-bold hover:opacity-90 shadow-sm transition transform hover:-translate-y-1">
+                                開始測驗
+                            </button>
+                        </div>
+
+                        <!-- Range Mode -->
+                        <div class="bg-white p-6 rounded-[30px] shadow-sm border border-gray-100">
+                            <div class="bg-macaron-green w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl mx-auto -mt-12 mb-4 shadow-md">
+                                <i class="fas fa-list-ol"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-600 mb-4">範圍練習</h3>
+                            <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 custom-scroll">
+                                ${rangeButtons}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuiz() {
+            const container = document.getElementById('scroll-container');
+            const footer = document.getElementById('quiz-footer');
+            footer.classList.remove('hidden');
+
+            const curr = appState.quizQuestions[appState.currentQIdx];
+            const q = curr.originalQ;
+
+            document.getElementById('tracker').innerText = `${appState.currentQIdx + 1} / ${appState.quizQuestions.length}`;
+            document.getElementById('btn-prev').disabled = (appState.currentQIdx === 0);
+            
+            const isLast = appState.currentQIdx === appState.quizQuestions.length - 1;
+            document.getElementById('btn-next').classList.toggle('hidden', isLast);
+            document.getElementById('btn-submit').classList.toggle('hidden', !isLast);
+
+            const optsHtml = curr.options.map((opt, idx) => {
+                const isSel = curr.userAns === idx;
+                return `
+                    <div onclick="selectOption(${idx})" class="option-card cursor-pointer p-4 md:p-6 rounded-2xl mb-3 flex items-center gap-4 ${isSel ? 'selected' : 'bg-gray-50'}">
+                        <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg md:text-xl font-bold shrink-0 ${isSel ? 'bg-macaron-blue text-white' : 'bg-white text-gray-400 border border-gray-200'}">
+                            ${idx + 1}
+                        </div>
+                        <div class="text-lg md:text-xl text-gray-700 font-medium">${opt.text}</div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto h-full flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="bg-macaron-yellow text-gray-700 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
+                            <i class="fas fa-clock"></i> <span id="timer-display">${formatTime(appState.timer)}</span>
+                        </div>
+                        <div class="text-gray-400 font-bold">QID: ${q.id}</div>
+                    </div>
+
+                    <div class="bg-white p-2 md:p-4 rounded-3xl flex-grow overflow-y-auto">
+                        <h3 class="text-huge font-bold text-gray-700 mb-8 leading-relaxed">
+                            <span class="text-macaron-blue mr-2">●</span>${q.question}
+                        </h3>
+                        <div class="space-y-2">
+                            ${optsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderResult() {
+            const container = document.getElementById('scroll-container');
+            document.getElementById('quiz-footer').classList.add('hidden');
+
+            let correctCount = 0;
+            const details = appState.quizQuestions.map((qData, idx) => {
+                const correctIdx = qData.originalQ.answerIndex;
+                let userText = "未作答";
+                let isCorrect = false;
+
+                if (qData.userAns !== null) {
+                    const chosen = qData.options[qData.userAns];
+                    userText = chosen.text;
+                    if (chosen.originalIdx === correctIdx) {
+                        isCorrect = true;
+                        correctCount++;
+                    }
+                }
+                const correctText = qData.originalQ.options[correctIdx];
+
+                return `
+                    <div class="bg-white p-6 rounded-2xl border-l-[8px] ${isCorrect ? 'border-macaron-green bg-green-50/50' : 'border-macaron-pink bg-red-50/50'} mb-6 print-break shadow-sm">
+                        <div class="flex justify-between mb-2">
+                            <span class="font-bold text-gray-500">第 ${idx + 1} 題</span>
+                            ${isCorrect ? '<i class="fas fa-check-circle text-green-500 text-2xl"></i>' : '<i class="fas fa-times-circle text-red-500 text-2xl"></i>'}
+                        </div>
+                        <div class="text-xl font-bold text-gray-800 mb-4">${qData.originalQ.question}</div>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="p-3 rounded-xl ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                <span class="text-xs opacity-60 block mb-1">您的答案</span>
+                                <span class="font-bold">${userText}</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-blue-50 text-blue-800">
+                                <span class="text-xs opacity-60 block mb-1">正確答案</span>
+                                <span class="font-bold">${correctText}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const score = Math.round((correctCount / appState.quizQuestions.length) * 100);
+
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto pb-20">
+                    <div class="bg-white rounded-[40px] shadow-xl p-8 mb-8 text-center border-t-[12px] border-macaron-blue relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-macaron-pink via-macaron-yellow to-macaron-blue opacity-50"></div>
+                        
+                        <h2 class="text-2xl font-bold text-gray-500 mb-2">${appState.userName} 的測驗結果</h2>
+                        <div class="text-[5rem] font-black text-macaron-blue leading-none mb-4 drop-shadow-sm">${score}</div>
+                        
+                        <div class="flex justify-center gap-8 text-lg font-bold text-gray-400">
+                            <div class="bg-gray-50 px-4 py-2 rounded-xl"><i class="fas fa-check text-green-400 mr-2"></i>答對 ${correctCount} 題</div>
+                            <div class="bg-gray-50 px-4 py-2 rounded-xl"><i class="fas fa-stopwatch text-yellow-400 mr-2"></i>耗時 ${formatTime(appState.timer)}</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-center gap-4 mb-10 no-print">
+                        <button onclick="downloadPDF()" class="btn-macaron bg-macaron-blue text-white px-8 py-4 rounded-xl font-bold shadow-md transition transform hover:-translate-y-1">
+                            <i class="fas fa-file-pdf mr-2"></i>下載成績單
+                        </button>
+                        <button onclick="downloadCSV()" class="btn-macaron bg-macaron-green text-gray-700 px-8 py-4 rounded-xl font-bold shadow-md transition transform hover:-translate-y-1">
+                            <i class="fas fa-file-csv mr-2"></i>匯出 Excel
+                        </button>
+                        <button onclick="location.reload()" class="btn-macaron bg-macaron-yellow text-gray-700 px-8 py-4 rounded-xl font-bold shadow-md transition transform hover:-translate-y-1">
+                            <i class="fas fa-redo mr-2"></i>重新測驗
+                        </button>
+                    </div>
+
+                    <div id="result-details">
+                        <h3 class="text-2xl font-bold text-gray-700 mb-6 border-b-2 border-gray-100 pb-2">
+                            <i class="fas fa-list-ul mr-2 text-macaron-pink"></i>試題詳解
+                        </h3>
+                        ${details}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- 6. Export Functions ---
+
+        function downloadCSV() {
+            let csv = "\uFEFF題號,題目,你的答案,正確答案,結果\n";
+            appState.quizQuestions.forEach((item, idx) => {
+                const q = item.originalQ;
+                const correctIdx = q.answerIndex;
+                const correctTxt = q.options[correctIdx];
+                let userTxt = "未作答";
+                let res = "錯誤";
+                
+                if (item.userAns !== null) {
+                    const chosen = item.options[item.userAns];
+                    userTxt = chosen.text;
+                    if (chosen.originalIdx === correctIdx) res = "正確";
+                }
+
+                // Escape quotes for CSV
+                const safe = (str) => '"' + str.replace(/"/g, '""') + '"';
+                csv += `${idx+1},${safe(q.question)},${safe(userTxt)},${safe(correctTxt)},${res}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${appState.userName}_成績報表.csv`;
+            a.click();
+        }
+
+        function downloadPDF() {
+            const el = document.getElementById('scroll-container');
+            const btns = document.querySelectorAll('.no-print');
+            btns.forEach(b => b.style.display = 'none');
+            
+            const opt = {
+                margin: 10,
+                filename: `${appState.userName}_成績單.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(el).save().then(() => {
+                btns.forEach(b => b.style.display = '');
+            });
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
